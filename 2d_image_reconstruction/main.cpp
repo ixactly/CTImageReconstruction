@@ -17,8 +17,6 @@ inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel)
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
 
 int main() {
-    // 400x470x4^2 = 14.1GB
-    std::vector <std::vector<float>> A_sys(H_IMG * W_IMG, std::vector<float>(NUM_DETECT * NUM_PROJ));
     std::vector<float> x_image(H_IMG * W_IMG);
     std::vector<float> b_proj(NUM_DETECT * NUM_PROJ);
 
@@ -35,6 +33,12 @@ int main() {
     BackProjection(x_image, b_proj);
 
     cv::Mat img(x_image);
+
+    // v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]→
+    // v.reshape(1, 3) = [1, 2, 3, 4,
+    //                    5, 6, 7, 8,
+    //                    9, 10, 11, 12]
+
     cv::Mat img_show = img.reshape(1, H_IMG);
 
     cv::imshow("reconstruction", img_show);
@@ -42,7 +46,7 @@ int main() {
     return 0;
 }
 
-void Art2D(std::vector <std::vector<float>> &A, const std::vector<float> &b) {
+void Art2D(std::vector<std::vector<float>> &A, const std::vector<float> &b) {
     // check if matrix can be multiplied
     /*
     if (!(A.size() == b.size() && A[0].size() == x.size())) {
@@ -77,8 +81,8 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                 if (pos_ray_on_t > -0.5 && pos_ray_on_t < NUM_PROJ + 0.5) {
                     // Linear interpolation
                     const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
-                    x_img[W_IMG * i_pic + j_pic] = b_proj[t_floor] * (t_floor + 1 - pos_ray_on_t) +
-                                                   b_proj[t_floor + 1] * (pos_ray_on_t - t_floor);
+                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t) +
+                                                   b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
                 }
             }
         }
