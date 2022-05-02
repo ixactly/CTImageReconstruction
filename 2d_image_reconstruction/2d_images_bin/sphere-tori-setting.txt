@@ -1,0 +1,17 @@
+# 開始角度 終了角度 (単位 度)
+angle start=0 end=360
+
+# X線源-サンプル間距離、ディテクタ-サンプル間距離
+distance source-sample=500 ditector-sample=500
+
+# ディテクタ 画素数縦、横　　画素サイズ縦、横　(単位mm)　　回転軸のずれ 光軸のずれ縦、横　(単位ピクセル)
+detector horizontalpixel=500 verticalpixel=500 horizontalsize=0.2 verticalsize=0.2 axisshift=0 horizontoffset=0 verticaloffset=0
+
+# X線透過像数　　X線透過像列ファイル
+sinogram projections=500 file="C:\Users\Ohtake\Desktop\DEMO-CT-Reon\sphere-tori-float-500x500x500.raw"
+
+# 材質番号、CT値(代表値)　　材質の数だけ繰り返す
+material  id=0 ctvalue=0 id=1 ctvalue=2
+
+# 初期形状ファイル  メッシュの辺のおおよその長さ　出力ファイル名
+output meshsize=0.8 tetra="C:\Users\Ohtake\Desktop\DEMO-CT-Reon\sphere-tori.tet"

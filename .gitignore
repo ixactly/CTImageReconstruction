@@ -1,0 +1,61 @@
+# Prerequisites
+*.d
+
+# projection data file
+*.raw
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+.vs
+.vscode
+CMakeSettings.json
+CMakeFiles
+cmake_install.cmake
+Makefile
+out
+
+# CLion
+.idea
+cmake-build-debug
+cmake-build-release
+cmake-build-minsizerel
+cmake-build-relwithdebinfo
+
+external/glfwlib
+external/eigen-*
+external/eigenlib
+*.DS_Store  
+build
+
+!assets/armadillo1.obj
+
+*/main_ans.cpp
+*/shader_ans.vert
