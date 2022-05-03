@@ -85,9 +85,9 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                     // Linear interpolation
                     x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t) +
                                                    b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
-                } else if (pos_ray_on_t < -0.5) { // corner case on using std::floor
-                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
-                } else if (pos_ray_on_t > NUM_DETECT - 1 + 0.5) {
+                } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
+                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
+                } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
                     x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
                 }
             }
