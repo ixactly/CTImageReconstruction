@@ -5,10 +5,10 @@
 #include <cmath>
 #include <filesystem>
 
-inline const int H_IMG = 470;
-inline const int W_IMG = 470;
+inline const int H_IMG = 100;
+inline const int W_IMG = 100;
 
-inline const int NUM_DETECT = 470;
+inline const int NUM_DETECT = 100;
 inline const int NUM_PROJ = 400;
 inline const double PIXEL_SIZE = 0.8;
 inline const double D_THETA = 2 * M_PI / NUM_PROJ;
@@ -62,30 +62,39 @@ void ForwardProjection(std::vector<float> &x_img, std::vector<float> &b_proj) {
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj) {
     double theta = 0;
-    const double x_rotate_center = (NUM_PROJ - 1) / 2.0 + AXIS_OFFSET;
-    const double y_rotate_center = (NUM_PROJ - 1) / 2.0;
+    const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
+    const double y_rotate_center = (H_IMG - 1) / 2.0;
     double pos_ray_on_t;
-    const int t_center = static_cast<int>(std::round(x_rotate_center));
-
+    const double t_center = (NUM_DETECT - 1) / 2.0;
 
     // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
         // pixel driven back projection
-        theta += D_THETA * k_proj;
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                 pos_ray_on_t =
                         (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta) +
                         t_center;
-                if (pos_ray_on_t > -0.5 && pos_ray_on_t < NUM_PROJ + 0.5) {
+                const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
+
+                if (k_proj == 200)
+                    std::cout << pos_ray_on_t << " ";
+
+                if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
-                    const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
                     x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t) +
                                                    b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
+                } else if (pos_ray_on_t < -0.5) { // corner case on using std::floor
+                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
+                } else if (pos_ray_on_t > NUM_DETECT - 1 + 0.5) {
+                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
                 }
             }
+            if (k_proj == 200)
+              std::cout << std::endl;
         }
+        theta += D_THETA;
     }
 }
 
