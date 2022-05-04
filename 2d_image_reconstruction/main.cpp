@@ -5,10 +5,10 @@
 #include <cmath>
 #include <filesystem>
 
-inline const int H_IMG = 100;
-inline const int W_IMG = 100;
+inline const int H_IMG = 470;
+inline const int W_IMG = 470;
 
-inline const int NUM_DETECT = 100;
+inline const int NUM_DETECT = 470;
 inline const int NUM_PROJ = 400;
 inline const double PIXEL_SIZE = 0.8;
 inline const double D_THETA = 2 * M_PI / NUM_PROJ;
@@ -67,6 +67,8 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
     double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
 
+    // debug variable
+    const int check_k = 100;
     // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
@@ -78,7 +80,7 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                         t_center;
                 const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
 
-                if (k_proj == 200)
+                if (k_proj == check_k)
                     std::cout << pos_ray_on_t << " ";
 
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
@@ -91,8 +93,8 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                     x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
                 }
             }
-            if (k_proj == 200)
-              std::cout << std::endl;
+            if (k_proj == check_k)
+                std::cout << std::endl;
         }
         theta += D_THETA;
     }
