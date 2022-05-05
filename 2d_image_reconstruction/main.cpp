@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <filesystem>
+#include <algorithm>
 
 inline const int H_IMG = 470;
 inline const int W_IMG = 470;
@@ -12,12 +13,12 @@ inline const int NUM_DETECT = 470;
 inline const int NUM_PROJ = 400;
 inline const double PIXEL_SIZE = 0.8;
 inline const double D_THETA = 2 * M_PI / NUM_PROJ;
-inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel)
+inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel) 12.3708265
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
 
 int main() {
-    std::vector<float> x_image(H_IMG * W_IMG);
+    std::vector<float> x_image(H_IMG * W_IMG, 0);
     std::vector<float> b_proj(NUM_DETECT * NUM_PROJ);
 
     // load image binary
@@ -29,7 +30,6 @@ int main() {
     }
     file.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
 
-
     BackProjection(x_image, b_proj);
 
     cv::Mat img(x_image);
@@ -38,6 +38,7 @@ int main() {
     // v.reshape(1, 3) = [1, 2, 3, 4,
     //                    5, 6, 7, 8,
     //                    9, 10, 11, 12]
+    // 表示もこの行列の通りに表示される
 
     cv::Mat img_show = img.reshape(1, H_IMG);
 
@@ -67,8 +68,6 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
     double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
 
-    // debug variable
-    const int check_k = 100;
     // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
@@ -76,30 +75,29 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                 pos_ray_on_t =
-                        (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta) +
-                        t_center;
+                        (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta)
+                        + t_center;
                 const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
 
-                if (k_proj == check_k)
-                    std::cout << pos_ray_on_t << " ";
-
+                float adder_to_img = 0;
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
-                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t) +
-                                                   b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
+                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t) +
+                                    b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) * D_THETA);
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
-                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor + 1] * (pos_ray_on_t - t_floor);
+                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) * D_THETA);
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
-                    x_img[W_IMG * i_pic + j_pic] = b_proj[NUM_PROJ * i_pic + t_floor] * (t_floor + 1 - pos_ray_on_t);
+                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)) * D_THETA);
                 }
+
+                x_img[W_IMG * i_pic + j_pic] += adder_to_img;
             }
-            if (k_proj == check_k)
-                std::cout << std::endl;
         }
         theta += D_THETA;
     }
 }
 
-void FilteredBackProjection2D() {
+void ForwardProjection(std::vector<float> &x_img, const std::vector<float> &b_proj) {
+    std::vector<std::vector<float>> A_sys(NUM_DETECT, std::vector<float>(H_IMG*W_IMG));
 
 }
