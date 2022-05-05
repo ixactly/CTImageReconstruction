@@ -16,6 +16,7 @@ inline const double D_THETA = 2 * M_PI / NUM_PROJ;
 inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel) 12.3708265
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
+void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_proj);
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);
@@ -31,8 +32,26 @@ int main() {
     file.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
 
     BackProjection(x_image, b_proj);
+    /*
+    for (int i = 0; i < H_IMG; ++i) {
+        for (int j = 0; j < W_IMG; ++j) {
+            if(std::fabs(i-H_IMG/2) < 100 && std::fabs(j-W_IMG/2) < 100) {
+                // std::cout << "pass" << std::endl;
+                x_image[H_IMG*i+j] = 100.0;
+            }
+        }
+    }
+    */
+
+    // SIRT method
+    const int iter = 4;
+    for (int i = 0; i < iter; ++i) {
+        ForwardProjection(x_image, b_proj);
+        BackProjection(x_image, b_proj);
+    }
 
     cv::Mat img(x_image);
+    cv::Mat prj(b_proj);
 
     // v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]→
     // v.reshape(1, 3) = [1, 2, 3, 4,
@@ -41,8 +60,9 @@ int main() {
     // 表示もこの行列の通りに表示される
 
     cv::Mat img_show = img.reshape(1, H_IMG);
-
-    cv::imshow("reconstruction", img_show);
+    cv::Mat prj_show = prj.reshape(1, NUM_PROJ);
+    cv::imshow("image", img_show);
+    cv::imshow("reprojection", prj_show);
     cv::waitKey(0);
     return 0;
 }
@@ -82,22 +102,56 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                 float adder_to_img = 0;
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
-                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t) +
-                                    b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) * D_THETA);
+                    adder_to_img = static_cast<float>(
+                            (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t) +
+                             b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) / NUM_PROJ);
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
-                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) * D_THETA);
+                    adder_to_img = static_cast<float>(
+                            (b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)) / NUM_PROJ);
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
-                    adder_to_img = static_cast<float>((b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)) * D_THETA);
+                    adder_to_img = static_cast<float>(
+                            (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)) / NUM_PROJ);
                 }
 
-                x_img[W_IMG * i_pic + j_pic] += adder_to_img;
+                x_img[W_IMG * i_pic + j_pic] += adder_to_img*0.5;
             }
         }
         theta += D_THETA;
     }
 }
 
-void ForwardProjection(std::vector<float> &x_img, const std::vector<float> &b_proj) {
-    std::vector<std::vector<float>> A_sys(NUM_DETECT, std::vector<float>(H_IMG*W_IMG));
+void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_proj) {
+    std::vector<std::vector<float>> T(H_IMG, std::vector<float>(W_IMG));
+    std::fill( b_proj.begin(), b_proj.end(), 0 );
 
+    double theta = 0;
+    const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
+    const double y_rotate_center = (H_IMG - 1) / 2.0;
+    double pos_ray_on_t;
+    const double t_center = (NUM_DETECT - 1) / 2.0;
+
+    for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
+        for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
+            for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
+                // 各セルの射影tの値を保有しておく
+                pos_ray_on_t =
+                        (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta)
+                        + t_center;
+                T[i_pic][j_pic] = pos_ray_on_t;
+            }
+        }
+
+        // forward projection(refer to t and pos_ray_on_t)
+        for (int t = 0; t < NUM_DETECT; ++t) {
+            for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
+                for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
+                    if (T[i_pic][j_pic] - t > -0.5 && T[i_pic][j_pic] - t <= 0.5) {
+                        b_proj[k_proj*NUM_DETECT + t] += x_img[H_IMG*i_pic+j_pic] * (1 - std::fabs(T[i_pic][j_pic] - t)) / NUM_PROJ;
+                    }
+                }
+            }
+        }
+
+        theta += D_THETA;
+    }
 }
