@@ -17,6 +17,7 @@ inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel) 12.3708265
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
 void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_proj);
+void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const double alpha, const int num_iter);
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);
@@ -31,7 +32,6 @@ int main() {
     }
     file.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
 
-    BackProjection(x_image, b_proj);
     /*
     for (int i = 0; i < H_IMG; ++i) {
         for (int j = 0; j < W_IMG; ++j) {
@@ -42,13 +42,7 @@ int main() {
         }
     }
     */
-
-    // SIRT method
-    const int iter = 4;
-    for (int i = 0; i < iter; ++i) {
-        ForwardProjection(x_image, b_proj);
-        BackProjection(x_image, b_proj);
-    }
+    SIRT(x_image, b_proj, 1.0, 15);
 
     cv::Mat img(x_image);
     cv::Mat prj(b_proj);
@@ -75,10 +69,6 @@ void Art2D(std::vector<std::vector<float>> &A, const std::vector<float> &b) {
         return;
     }
      */
-}
-
-void ForwardProjection(std::vector<float> &x_img, std::vector<float> &b_proj) {
-
 }
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj) {
@@ -113,7 +103,7 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                             (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)) / NUM_PROJ);
                 }
 
-                x_img[W_IMG * i_pic + j_pic] += adder_to_img*0.5;
+                x_img[W_IMG * i_pic + j_pic] += adder_to_img;
             }
         }
         theta += D_THETA;
@@ -121,8 +111,8 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
 }
 
 void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_proj) {
-    std::vector<std::vector<float>> T(H_IMG, std::vector<float>(W_IMG));
-    std::fill( b_proj.begin(), b_proj.end(), 0 );
+    std::vector<std::vector<double>> T(H_IMG, std::vector<double>(W_IMG));
+    std::fill(b_proj.begin(), b_proj.end(), 0);
 
     double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
@@ -146,12 +136,30 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
             for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
                 for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                     if (T[i_pic][j_pic] - t > -0.5 && T[i_pic][j_pic] - t <= 0.5) {
-                        b_proj[k_proj*NUM_DETECT + t] += x_img[H_IMG*i_pic+j_pic] * (1 - std::fabs(T[i_pic][j_pic] - t)) / NUM_PROJ;
+                        b_proj[k_proj * NUM_DETECT + t] +=
+                                x_img[H_IMG * i_pic + j_pic] * (1 - std::fabs(T[i_pic][j_pic] - t)) / NUM_PROJ;
                     }
                 }
             }
         }
-
         theta += D_THETA;
+    }
+}
+
+void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const double alpha, const int num_iter) {
+    std::vector<float> b_tmp(b_proj.size());
+    std::vector<float> x_tmp(x_img.size());
+
+    for (int iter = 0; iter < num_iter; ++iter) {
+        // calculate error
+        ForwardProjection(x_img, b_tmp);
+        for (int i = 0; i < b_tmp.size(); ++i) {
+            b_tmp[i] = alpha * (b_proj[i] - b_tmp[i]);
+        }
+        // fixing
+        BackProjection(x_tmp, b_tmp);
+        for (int i = 0; i < x_tmp.size(); ++i) {
+            x_img[i] = x_img[i] + x_tmp[i];
+        }
     }
 }
