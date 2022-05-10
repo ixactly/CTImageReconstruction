@@ -13,7 +13,7 @@ inline const int NUM_DETECT = 470;
 inline const int NUM_PROJ = 400;
 inline const double PIXEL_SIZE = 0.8;
 inline const double D_THETA = 2 * M_PI / NUM_PROJ;
-inline const double AXIS_OFFSET = 0; // (unit: pixel) 12.3708265
+inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel) 12.3708265
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
 
@@ -60,7 +60,7 @@ int main() {
     ForwardProjection(x_image, b_proj);
     std::fill(x_image.begin(), x_image.end(), 0);
 
-    for (int iter = 0; iter < 100; iter++)
+    for (int iter = 0; iter < 50; iter++)
         ART(x_image, b_proj);
 
 
@@ -79,6 +79,7 @@ int main() {
     cv::Mat prj_show = prj.reshape(1, NUM_PROJ);
     cv::imshow("image", img_show);
     cv::imshow("sinogram", prj_show);
+
     cv::waitKey(0);
     return 0;
 }
