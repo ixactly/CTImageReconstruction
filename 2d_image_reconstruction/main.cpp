@@ -13,12 +13,17 @@ inline const int NUM_DETECT = 470;
 inline const int NUM_PROJ = 400;
 inline const double PIXEL_SIZE = 0.8;
 inline const double D_THETA = 2 * M_PI / NUM_PROJ;
-inline const double AXIS_OFFSET = 12.3708265; // (unit: pixel) 12.3708265
+inline const double AXIS_OFFSET = 0; // (unit: pixel) 12.3708265
 
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj);
+
 void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_proj);
+
 void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const double alpha, const int num_iter);
-void ART(std::vector<float> &x_img, const std::vector<float> &b_proj, const int num_iter);
+
+void ART(std::vector<float> &x_img, const std::vector<float> &b_proj);
+
+void Normalize(std::vector<float> vec, const double max);
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);
@@ -44,18 +49,22 @@ int main() {
     */
 
     // square
-    /*
+
     for (int i = 0; i < H_IMG; ++i) {
         for (int j = 0; j < W_IMG; ++j) {
-            if(std::fabs(i-H_IMG/2) < 100 && std::fabs(j - W_IMG/2) < 100) {
-                x_image[H_IMG*i+j] = 0.001;
+            if (std::fabs(i - H_IMG / 2) < 100 && std::fabs(j - W_IMG / 2) < 100) {
+                x_image[H_IMG * i + j] = 2.0;
             }
         }
     }
-     */
-    BackProjection(x_image, b_proj);
+    ForwardProjection(x_image, b_proj);
+    std::fill(x_image.begin(), x_image.end(), 0);
 
-    // ART(x_image, b_proj, 3);
+    for (int iter = 0; iter < 100; iter++)
+        ART(x_image, b_proj);
+
+
+    Normalize(x_image, 2.0);
 
     cv::Mat img(x_image);
     cv::Mat prj(b_proj);
@@ -69,19 +78,12 @@ int main() {
     cv::Mat img_show = img.reshape(1, H_IMG);
     cv::Mat prj_show = prj.reshape(1, NUM_PROJ);
     cv::imshow("image", img_show);
-    cv::imshow("reprojection", prj_show);
+    cv::imshow("sinogram", prj_show);
     cv::waitKey(0);
     return 0;
 }
 
-void ART(std::vector<float> &x_img, const std::vector<float> &b_proj, const int num_iter) {
-    // check if matrix can be multiplied
-    /*
-    if (!(A.size() == b.size() && A[0].size() == x.size())) {
-        std::cout << "invalid matrix size" << std::endl;
-        return;
-    }
-     */
+void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
 
     double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
@@ -116,24 +118,24 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj, const int 
 
         // pop from stack data and calculate projection
 
-            int t = 0;
-            for (auto &e: A_sparse) {
-                float norm_a = 0;
-                float dot_ax = 0;
+        int t = 0;
+        for (auto &e: A_sparse) {
+            float norm_a = 0;
+            float dot_ax = 0;
 
-                std::vector<std::pair<float, int>> vec_a(e.size());
-                for (auto &a: vec_a) {
-                    a = e.top();
-                    norm_a += std::pow(a.first, 2);
-                    dot_ax += a.first * x_img[a.second];
-                    e.pop();
-                }
-
-                for (int i = 0; i < vec_a.size(); ++i) {
-                    x_img[vec_a[i].second] += (b_proj[k_proj * NUM_DETECT + t] - dot_ax) * vec_a[i].first / norm_a;
-                }
-                t++;
+            std::vector<std::pair<float, int>> vec_a(e.size());
+            for (auto &a: vec_a) {
+                a = e.top();
+                norm_a += std::pow(a.first, 2);
+                dot_ax += a.first * x_img[a.second];
+                e.pop();
             }
+
+            for (auto &a: vec_a) {
+                x_img[a.second] += (b_proj[k_proj * NUM_DETECT + t] - dot_ax) * a.first / norm_a;
+            }
+            t++;
+        }
         theta += D_THETA;
     }
 }
@@ -171,7 +173,7 @@ void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj)
                             (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)));
                 }
 
-                x_img[W_IMG * i_pic + j_pic] += (adder_to_img * D_THETA);
+                x_img[W_IMG * i_pic + j_pic] += adder_to_img / NUM_PROJ;
             }
         }
         theta += D_THETA;
@@ -216,7 +218,7 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
         int t = 0;
         for (auto &e: A_sparse) {
             while (!e.empty()) {
-                b_proj[k_proj*NUM_DETECT+t] += e.top().first * x_img[e.top().second];
+                b_proj[k_proj * NUM_DETECT + t] += e.top().first * x_img[e.top().second];
                 e.pop();
             }
             t++;
@@ -240,5 +242,13 @@ void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const dou
         for (int i = 0; i < x_tmp.size(); ++i) {
             x_img[i] = x_img[i] + x_tmp[i];
         }
+    }
+}
+
+void Normalize(std::vector<float> vec, const double max) {
+    auto max_val = *std::max_element(vec.begin(), vec.end());
+    for (auto &e: vec) {
+        e = e * max / max_val;
+        // std::cout << e << " ";
     }
 }
