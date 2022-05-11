@@ -23,7 +23,7 @@ void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const dou
 
 void ART(std::vector<float> &x_img, const std::vector<float> &b_proj);
 
-void Normalize(std::vector<float> vec, const double max);
+void Normalize(std::vector<float> &vec, const float max);
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);
@@ -31,12 +31,15 @@ int main() {
 
     // load image binary
     std::filesystem::path cur_path = std::filesystem::current_path();
-    std::ifstream file("../2d_images_bin/elephant-470x400.raw", std::ios::binary);
-    if (!file) {
+    std::ifstream ifile("../2d_images_bin/elephant-470x400.raw", std::ios::binary);
+    if (!ifile) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;
+        return 0;
     }
-    file.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
+    ifile.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
+
+    // --------------- main function ---------------
 
     /* hexagonal
     for (int i = 0; i < H_IMG; ++i) {
@@ -47,7 +50,6 @@ int main() {
         }
     }
     */
-
     // square
 
     for (int i = 0; i < H_IMG; ++i) {
@@ -60,9 +62,15 @@ int main() {
     ForwardProjection(x_image, b_proj);
     std::fill(x_image.begin(), x_image.end(), 0);
 
-    for (int iter = 0; iter < 50; iter++)
-        ART(x_image, b_proj);
+    // BackProjection(x_image, b_proj);
+    SIRT(x_image, b_proj, 0.001, 100);
 
+    // --------------- end main ---------------
+    for (auto &e: x_image) {
+        if (e < 0) {
+            e = 0;
+        }
+    }
 
     Normalize(x_image, 2.0);
 
@@ -81,6 +89,15 @@ int main() {
     cv::imshow("sinogram", prj_show);
 
     cv::waitKey(0);
+
+    std::ofstream ofs("../2d_images_bin/ele_image-470x470.raw", std::ios::binary);
+    if (!ofs) {
+        std::cout << "file not opened" << std::endl;
+        std::cout << cur_path.string() << std::endl;
+        return 0;
+    }
+    ofs.write(reinterpret_cast<char *>(x_image.data()), sizeof(float) * H_IMG * W_IMG);
+
     return 0;
 }
 
@@ -231,25 +248,25 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
 void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const double alpha, const int num_iter) {
     std::vector<float> b_tmp(b_proj.size());
     std::vector<float> x_tmp(x_img.size());
+    const float max_b = *std::max_element(b_proj.begin(), b_proj.end());
 
     for (int iter = 0; iter < num_iter; ++iter) {
         // calculate error
         ForwardProjection(x_img, b_tmp);
+
         for (int i = 0; i < b_tmp.size(); ++i) {
             b_tmp[i] = alpha * (b_proj[i] - b_tmp[i]);
         }
         // fixing
         BackProjection(x_tmp, b_tmp);
+
         for (int i = 0; i < x_tmp.size(); ++i) {
             x_img[i] = x_img[i] + x_tmp[i];
         }
     }
 }
 
-void Normalize(std::vector<float> vec, const double max) {
-    auto max_val = *std::max_element(vec.begin(), vec.end());
-    for (auto &e: vec) {
-        e = e * max / max_val;
-        // std::cout << e << " ";
-    }
+void Normalize(std::vector<float> &vec, const float max) {
+    float max_val = *std::max_element(vec.begin(), vec.end());
+    for (auto &e: vec) e = e * max / max_val;
 }
