@@ -54,16 +54,15 @@ int main() {
 
     for (int i = 0; i < H_IMG; ++i) {
         for (int j = 0; j < W_IMG; ++j) {
-            if (std::fabs(i - H_IMG / 2) < 100 && std::fabs(j - W_IMG / 2) < 100) {
+            if (std::fabs(i - H_IMG / 3) < 50 && std::fabs(j - W_IMG / 4) < 30) {
                 x_image[H_IMG * i + j] = 2.0;
             }
         }
     }
-    ForwardProjection(x_image, b_proj);
-    std::fill(x_image.begin(), x_image.end(), 0);
-
+    // ForwardProjection(x_image, b_proj);
+    // std::fill(x_image.begin(), x_image.end(), 0);
     // BackProjection(x_image, b_proj);
-    SIRT(x_image, b_proj, 0.001, 100);
+    // SIRT(x_image, b_proj, 0.001, 100);
 
     // --------------- end main ---------------
     for (auto &e: x_image) {
@@ -72,7 +71,7 @@ int main() {
         }
     }
 
-    Normalize(x_image, 2.0);
+    Normalize(x_image, 1.0);
 
     cv::Mat img(x_image);
     cv::Mat prj(b_proj);
@@ -104,7 +103,7 @@ int main() {
 void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
 
     double theta = 0;
-    const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
+    const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
     double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
@@ -161,7 +160,7 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
 // projectionするセルの数で割る必要がありそう?
 void BackProjection(std::vector<float> &x_img, const std::vector<float> &b_proj) {
     double theta = 0;
-    const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
+    const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
     double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
@@ -203,7 +202,7 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
     std::fill(b_proj.begin(), b_proj.end(), 0);
 
     double theta = 0;
-    const double x_rotate_center = (W_IMG - 1) / 2.0 + AXIS_OFFSET;
+    const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
     double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
