@@ -39,7 +39,7 @@ int main() {
     }
     ifile.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
 
-    // --------------- main function ---------------
+    // --------------- main processing ---------------
 
     /* hexagonal
     for (int i = 0; i < H_IMG; ++i) {
@@ -59,12 +59,12 @@ int main() {
             }
         }
     }
-    // ForwardProjection(x_image, b_proj);
-    // std::fill(x_image.begin(), x_image.end(), 0);
-    // BackProjection(x_image, b_proj);
+    ForwardProjection(x_image, b_proj);
+    std::fill(x_image.begin(), x_image.end(), 0);
+    BackProjection(x_image, b_proj);
     // SIRT(x_image, b_proj, 0.001, 100);
 
-    // --------------- end main ---------------
+    // --------------- end processing ---------------
     for (auto &e: x_image) {
         if (e < 0) {
             e = 0;
@@ -211,7 +211,8 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
         // pixel driven back projection
-        std::vector<std::stack<std::pair<float, int>>> A_sparse(NUM_DETECT);
+        // std::vector<std::stack<std::pair<float, int>>> A_sparse(NUM_DETECT);
+
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                 pos_ray_on_t =
@@ -221,24 +222,23 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
 
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
+                    b_proj[k_proj * NUM_DETECT + t_floor] +=
+                            (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
+                    b_proj[k_proj * NUM_DETECT + t_floor + 1] +=
+                            (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
+                    /*
                     A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
                     A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                    */
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
-                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                    b_proj[k_proj * NUM_DETECT + t_floor + 1] +=
+                            (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
+                    // A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
-                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                    b_proj[k_proj * NUM_DETECT + t_floor] +=
+                            (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
                 }
             }
-        }
-
-        // pop by stack data and calculate projection
-        int t = 0;
-        for (auto &e: A_sparse) {
-            while (!e.empty()) {
-                b_proj[k_proj * NUM_DETECT + t] += e.top().first * x_img[e.top().second];
-                e.pop();
-            }
-            t++;
         }
         theta += D_THETA;
     }
