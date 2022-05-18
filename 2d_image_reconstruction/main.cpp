@@ -101,8 +101,7 @@ int main() {
 }
 
 void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
-
-    double theta = 0;
+    /*double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
     double pos_ray_on_t;
@@ -111,20 +110,29 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
     // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
-
+        // Asparse
         // pixel driven forward projection
-        std::vector<std::stack<std::pair<float, int>>> A_sparse(NUM_DETECT);
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
+
                 pos_ray_on_t =
                         (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta)
                         + t_center;
                 const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
 
+                float norm_a = 0;
+                float dot_ax = 0;
+
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
-                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
-                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                    norm_a += std::pow(1 - (pos_ray_on_t - t_floor), 2) +
+                              std::pow((pos_ray_on_t - t_floor), 2);
+                    dot_ax += (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic] +
+                              (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
+
+//                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+//                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
                     A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
@@ -134,7 +142,6 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
         }
 
         // pop from stack data and calculate projection
-
         int t = 0;
         for (auto &e: A_sparse) {
             float norm_a = 0;
@@ -154,7 +161,7 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
             t++;
         }
         theta += D_THETA;
-    }
+    }*/
 }
 
 // projectionするセルの数で割る必要がありそう?
@@ -226,14 +233,11 @@ void ForwardProjection(const std::vector<float> &x_img, std::vector<float> &b_pr
                             (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
                     b_proj[k_proj * NUM_DETECT + t_floor + 1] +=
                             (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
-                    /*
-                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
-                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
-                    */
+
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
                     b_proj[k_proj * NUM_DETECT + t_floor + 1] +=
                             (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
-                    // A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
                     b_proj[k_proj * NUM_DETECT + t_floor] +=
                             (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
