@@ -7,7 +7,7 @@
 #include <array>
 #include <cmath>
 
-void ParallelBackProj(std::vector<float> &x_img, const std::vector<float> &b_proj);
+void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_img);
 
 void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_proj);
 
@@ -16,3 +16,11 @@ void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const dou
 void ART(std::vector<float> &x_img, const std::vector<float> &b_proj);
 
 void Normalize(std::vector<float> &vec, const float max);
+
+void FanBackProj();
+
+void FanForwardProj();
+
+void Fan2Para(const std::vector<float> &fan_proj, std::vector<float> &par_proj);
+
+void Para2Fan();

@@ -1,12 +1,12 @@
 //
 // Created by 森智希 on 2022/05/20.
 //
-
+#include <iostream>
 #include "reconst2d.h"
 #include "params.h"
 
 // projectionするセルの数で割る必要がありそう?
-void ParallelBackProj(std::vector<float> &x_img, const std::vector<float> &b_proj) {
+void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_img) {
     double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
@@ -102,12 +102,106 @@ void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const dou
             b_tmp[i] = alpha * (b_proj[i] - b_tmp[i]);
         }
         // fixing
-        ParallelBackProj(x_tmp, b_tmp);
+        ParallelBackProj(b_tmp, x_tmp);
 
         for (int i = 0; i < x_tmp.size(); ++i) {
             x_img[i] = x_img[i] + x_tmp[i];
         }
     }
+}
+
+void Fan2Para(const std::vector<float> &fan_proj, std::vector<float> &par_proj) { // Geometry classの追加
+    const double L0 = DISTANCE_SOURCE_SAMPLE;
+    const double Ld = DISTANCE_SOURCE_SAMPLE + DISTANCE_DETECT_SAMPLE;
+
+    double t_fan, theta_fan;
+    for (int t_par = 0; t_par < NUM_DETECT; ++t_par) {
+        double Xp = (t_par - NUM_DETECT / 2.0) * PIXEL_SIZE;
+        t_fan = Ld * Xp / std::sqrt(L0 * L0 - Xp * Xp) / PIXEL_SIZE + NUM_DETECT / 2.0;
+        if (t_fan < 0 || t_fan > NUM_DETECT) {
+            continue;
+        }
+
+        for (int theta_par = 0; theta_par < NUM_PROJ; ++theta_par) {
+            theta_fan = theta_par - t_par / std::sqrt(L0 * L0 - Xp * Xp);
+            if (theta_fan < 0 || theta_fan > NUM_PROJ) continue;
+
+            // lerp(Linear Interpolation) in t, theta direction
+            double a = t_fan - std::floor(t_fan);
+            double b = theta_fan - std::floor(theta_fan);
+
+            double w1 = fan_proj[std::floor(theta_fan) * NUM_DETECT + std::floor(t_fan)] * (1 - a) * (1 - b);
+            double w2 = fan_proj[std::floor(theta_fan) * NUM_DETECT + (std::floor(t_fan) + 1)] * a * (1 - b);
+            double w3 = fan_proj[(std::floor(theta_fan) + 1) * NUM_DETECT + std::floor(t_fan) + 1] * a * b;
+            double w4 = fan_proj[(std::floor(theta_fan) + 1) * NUM_DETECT + std::floor(t_fan)] * (1 - a) * b;
+
+            par_proj[theta_par * NUM_DETECT + t_par] = w1 + w2 + w3 + w4;
+        }
+    }
+}
+
+void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
+    /*double theta = 0;
+    const double x_rotate_center = (W_IMG - 1) / 2.0;
+    const double y_rotate_center = (H_IMG - 1) / 2.0;
+    double pos_ray_on_t;
+    const double t_center = (NUM_DETECT - 1) / 2.0;
+
+    // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
+    for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
+        // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
+        // Asparse
+        // pixel driven forward projection
+        for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
+            for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
+
+                pos_ray_on_t =
+                        (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta)
+                        + t_center;
+                const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
+
+                float norm_a = 0;
+                float dot_ax = 0;
+
+                if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
+                    // Linear interpolation
+                    norm_a += std::pow(1 - (pos_ray_on_t - t_floor), 2) +
+                              std::pow((pos_ray_on_t - t_floor), 2);
+                    dot_ax += (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic] +
+                              (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
+
+//                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+//                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+
+                } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
+                    A_sparse[t_floor + 1].push(std::make_pair((pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
+                    A_sparse[t_floor].push(std::make_pair(1 - (pos_ray_on_t - t_floor), W_IMG * i_pic + j_pic));
+                }
+            }
+        }
+
+        // pop from stack data and calculate projection
+        int t = 0;
+        for (auto &e: A_sparse) {
+            float norm_a = 0;
+            float dot_ax = 0;
+
+            std::vector<std::pair<float, int>> vec_a(e.size());
+            for (auto &a: vec_a) {
+                a = e.top();
+                norm_a += std::pow(a.first, 2);
+                dot_ax += a.first * x_img[a.second];
+                e.pop();
+            }
+
+            for (auto &a: vec_a) {
+                x_img[a.second] += (b_proj[k_proj * NUM_DETECT + t] - dot_ax) * a.first / norm_a;
+            }
+            t++;
+        }
+        theta += D_THETA;
+    }*/
 }
 
 void Normalize(std::vector<float> &vec, const float max) {
