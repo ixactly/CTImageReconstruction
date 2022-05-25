@@ -61,7 +61,7 @@ int main() {
 
     Normalize(x_image, 1.0);
 
-    cv::Mat img(x_image);
+    cv::Mat img(b_proj);
     cv::Mat prj(parallel);
 
     // v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]→
@@ -70,14 +70,14 @@ int main() {
     //                    9, 10, 11, 12]
     // 表示もこの行列の通りに表示される
 
-    cv::Mat img_show = img.reshape(1, H_IMG);
+    cv::Mat img_show = img.reshape(1, NUM_PROJ);
     cv::Mat prj_show = prj.reshape(1, NUM_PROJ);
     cv::imshow("img", img_show);
     cv::imshow("parallel", prj_show);
 
     cv::waitKey(0);
 
-    std::ofstream ofs("../2d_images_bin/para-400x470.raw", std::ios::binary);
+    std::ofstream ofs("../2d_images_bin/para-470x400.raw", std::ios::binary);
     if (!ofs) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;

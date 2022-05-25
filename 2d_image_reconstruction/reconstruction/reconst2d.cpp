@@ -123,8 +123,11 @@ void Fan2Para(const std::vector<float> &fan_proj, std::vector<float> &par_proj) 
         }
 
         for (int theta_par = 0; theta_par < NUM_PROJ; ++theta_par) {
-            theta_fan = theta_par - t_par / std::sqrt(L0 * L0 - Xp * Xp);
-            if (theta_fan < 0 || theta_fan > NUM_PROJ) continue;
+            theta_fan = (theta_par * D_THETA - std::atan2(Xp, std::sqrt(L0 * L0 - Xp * Xp))) / D_THETA;
+            if (theta_fan < 0 || theta_fan > NUM_PROJ) {
+                std::cout << "t: " << t_fan << " theta: " << theta_fan << std::endl;
+                continue;
+            }
 
             // lerp(Linear Interpolation) in t, theta direction
             double a = t_fan - std::floor(t_fan);
