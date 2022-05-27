@@ -117,13 +117,19 @@ void Fan2Para(const std::vector<float> &fan_proj, std::vector<float> &par_proj) 
     double t_fan, theta_fan;
     for (int t_par = 0; t_par < NUM_DETECT; ++t_par) {
         double Xp = (t_par - NUM_DETECT / 2.0) * PIXEL_SIZE;
-        t_fan = Ld * Xp / std::sqrt(L0 * L0 - Xp * Xp) / PIXEL_SIZE + NUM_DETECT / 2.0;
+        double Xp_max = NUM_DETECT * PIXEL_SIZE / 2.0;
+
+        double scale = std::sqrt(L0 * L0 - Xp_max * Xp_max) / Ld;
+        t_fan = scale * Ld * Xp / std::sqrt(L0 * L0 - Xp * Xp) / PIXEL_SIZE + NUM_DETECT / 2.0;
         if (t_fan < 0 || t_fan > NUM_DETECT) {
+            std::cout << "t: " << t_fan << " theta: " << theta_fan << std::endl;
             continue;
         }
 
         for (int theta_par = 0; theta_par < NUM_PROJ; ++theta_par) {
-            theta_fan = (theta_par * D_THETA - std::atan2(Xp, std::sqrt(L0 * L0 - Xp * Xp))) / D_THETA;
+            theta_fan =
+                    std::fmod(2 * M_PI + theta_par * D_THETA - std::atan2(Xp, std::sqrt(L0 * L0 - Xp * Xp)), 2 * M_PI) /
+                    D_THETA;
             if (theta_fan < 0 || theta_fan > NUM_PROJ) {
                 std::cout << "t: " << t_fan << " theta: " << theta_fan << std::endl;
                 continue;
@@ -132,11 +138,11 @@ void Fan2Para(const std::vector<float> &fan_proj, std::vector<float> &par_proj) 
             // lerp(Linear Interpolation) in t, theta direction
             double a = t_fan - std::floor(t_fan);
             double b = theta_fan - std::floor(theta_fan);
-
+            int floor_idx = (static_cast<int>(theta_fan) + 1) % NUM_PROJ;
             double w1 = fan_proj[std::floor(theta_fan) * NUM_DETECT + std::floor(t_fan)] * (1 - a) * (1 - b);
             double w2 = fan_proj[std::floor(theta_fan) * NUM_DETECT + (std::floor(t_fan) + 1)] * a * (1 - b);
-            double w3 = fan_proj[(std::floor(theta_fan) + 1) * NUM_DETECT + std::floor(t_fan) + 1] * a * b;
-            double w4 = fan_proj[(std::floor(theta_fan) + 1) * NUM_DETECT + std::floor(t_fan)] * (1 - a) * b;
+            double w3 = fan_proj[floor_idx * NUM_DETECT + std::floor(t_fan) + 1] * a * b;
+            double w4 = fan_proj[floor_idx * NUM_DETECT + std::floor(t_fan)] * (1 - a) * b;
 
             par_proj[theta_par * NUM_DETECT + t_par] = w1 + w2 + w3 + w4;
         }
