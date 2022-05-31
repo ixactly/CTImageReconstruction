@@ -11,6 +11,8 @@ void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_im
 
 void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_proj);
 
+void MLEM(std::vector<float> &x_img, const std::vector<float> &b_proj);
+
 void SIRT(std::vector<float> &x_img, const std::vector<float> &b_proj, const double alpha, const int num_iter);
 
 void ART(std::vector<float> &x_img, const std::vector<float> &b_proj);

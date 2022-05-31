@@ -26,39 +26,38 @@ int main() {
     ifile.read(reinterpret_cast<char *>(b_proj.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
 
     // --------------- main processing ---------------
-
-    /* hexagonal
+    /*
     for (int i = 0; i < H_IMG; ++i) {
         for (int j = 0; j < W_IMG; ++j) {
             if(std::fabs(i+j-H_IMG) < 100 && std::fabs(j - W_IMG/2) < 100) {
-                x_image[H_IMG*i+j] = 1.5;
+                x_image[H_IMG*i+j] = 1.0;
             }
         }
     }
-    */
-    // square
+     */
 
+
+    // initialize
     for (int i = 0; i < H_IMG; ++i) {
         for (int j = 0; j < W_IMG; ++j) {
-            if (std::fabs(i - H_IMG / 3) < 50 && std::fabs(j - W_IMG / 4) < 30) {
-                x_image[H_IMG * i + j] = 2.0;
-            }
+            if (std::sqrt(std::pow(i - H_IMG / 2, 2) + std::pow(j - W_IMG / 2, 2)) < H_IMG / 2)
+            x_image[H_IMG * i + j] = 1.0;
         }
     }
-    // ParallelForwardProj(x_image, b_proj);
-    std::fill(x_image.begin(), x_image.end(), 0);
-    Fan2Para(b_proj, parallel);
-    ParallelBackProj(parallel, x_image);
 
-    // --------------- end processing ---------------
-    /*
-    for (auto &e: x_image) {
-        if (e < 0) {
-            e = 0;
+    Fan2Para(b_proj, parallel);
+
+    for (auto &e : parallel) {
+        if (e < 0.0) {
+            e = 1e-10;
         }
     }
-    Normalize(x_image, 1.0);
-    */
+
+    for (int iter = 0; iter < 50; iter++) MLEM(x_image, parallel);
+    ParallelForwardProj(x_image, parallel);
+    // --------------- end processing ---------------
+
+    // Normalize(x_image, 1.0);
 
     cv::Mat img(x_image);
     cv::Mat prj(parallel);
@@ -76,14 +75,14 @@ int main() {
 
     cv::waitKey(0);
 
-    std::ofstream ofs("../2d_images_bin/para_image-470x470.raw", std::ios::binary);
+    std::ofstream ofs("../2d_images_bin/elem_img-470x470.raw", std::ios::binary);
     if (!ofs) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;
         return 0;
     }
 
-    ofs.write(reinterpret_cast<char *>(x_image.data()), sizeof(float) * H_IMG * W_IMG);
+    ofs.write(reinterpret_cast<char *>(x_image.data()), sizeof(float) * H_IMG * H_IMG);
 
     return 0;
 }

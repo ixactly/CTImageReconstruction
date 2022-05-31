@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+// elephant
 inline const int H_IMG = 470;
 inline const int W_IMG = 470;
 

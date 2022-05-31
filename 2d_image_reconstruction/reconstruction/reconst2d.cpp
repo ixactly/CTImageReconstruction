@@ -9,6 +9,8 @@
 void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_img) {
     // projectionするセルの数で割る必要がありそう?
     // 検出確率で割る
+    std::fill(x_img.begin(), x_img.end(), 0);
+
     double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
@@ -36,8 +38,7 @@ void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_im
                     adder_to_img += static_cast<float>(
                             (b_proj[NUM_DETECT * k_proj + t_floor] * (1 - (pos_ray_on_t - t_floor)) +
                              b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)));
-                    C_prob += 1 - (pos_ray_on_t - t_floor);
-                    C_prob += pos_ray_on_t - t_floor;
+                    C_prob += 1.0;
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
                     adder_to_img += static_cast<float>(
                             (b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)));
@@ -51,7 +52,7 @@ void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_im
                 // loop proj
                 theta += D_THETA;
             }
-            x_img[W_IMG * i_pic + j_pic] = adder_to_img * D_THETA / C_prob;
+            x_img[W_IMG * i_pic + j_pic] = adder_to_img / C_prob;
         }
     }
 }
@@ -70,7 +71,7 @@ void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_
     for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
         // pixel driven back projection
-        // std::vector<std::stack<std::pair<float, int>>> A_sparse(NUM_DETECT);
+
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                 pos_ray_on_t =
@@ -81,7 +82,7 @@ void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
                     b_proj[k_proj * NUM_DETECT + t_floor] +=
-                            (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
+                            (1.0 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
                     b_proj[k_proj * NUM_DETECT + t_floor + 1] +=
                             (pos_ray_on_t - t_floor) * x_img[W_IMG * i_pic + j_pic];
 
@@ -91,7 +92,7 @@ void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_
 
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
                     b_proj[k_proj * NUM_DETECT + t_floor] +=
-                            (1 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
+                            (1.0 - (pos_ray_on_t - t_floor)) * x_img[W_IMG * i_pic + j_pic];
                 }
             }
         }
@@ -223,11 +224,37 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
     }*/
 }
 
-void MLEM(std::vector<float> &x_img, const std::vector<float> &b_proj, const int iter) {
+void MLEM(std::vector<float> &x_img, const std::vector<float> &b_proj) {
+    const double eps = 1e-08;
+    std::vector<float> tmp_proj(b_proj.size());
+    std::vector<float> tmp_img(x_img.size());
 
+    ParallelForwardProj(x_img, tmp_proj);
+
+    for (int t = 0; t < tmp_proj.size(); t++) {
+        /*if (t % 20 == 0)
+            std::cout << "detect:" << tmp_proj[t] << " " << b_proj[t] << std::endl;
+        */
+        tmp_proj[t] = b_proj[t] / (tmp_proj[t] + eps);
+
+    }
+
+    ParallelBackProj(tmp_proj, tmp_img);
+    for (int i_img = 0; i_img < x_img.size(); i_img++) {
+        x_img[i_img] = x_img[i_img] * tmp_img[i_img];
+        /*
+        if (i_img % 20 == 0)
+            std::cout << "img:" << x_img[i_img] << std::endl;
+        */
+    }
 }
 
 void Normalize(std::vector<float> &vec, const float max) {
     float max_val = *std::max_element(vec.begin(), vec.end());
+    std::vector<float>::iterator max_idx = std::max_element(vec.begin(), vec.end());
+    size_t maxIndex = std::distance(vec.begin(), max_idx);
     for (auto &e: vec) e = e * max / max_val;
+    std::cout << "max: " << *std::max_element(vec.begin(), vec.end()) << " " << maxIndex / H_IMG << " "
+              << maxIndex % H_IMG << std::endl;
+
 }
