@@ -5,43 +5,54 @@
 #include "reconst2d.h"
 #include "params.h"
 
-// projectionするセルの数で割る必要がありそう?
+
 void ParallelBackProj(const std::vector<float> &b_proj, std::vector<float> &x_img) {
+    // projectionするセルの数で割る必要がありそう?
+    // 検出確率で割る
     double theta = 0;
     const double x_rotate_center = (W_IMG - 1) / 2.0;
     const double y_rotate_center = (H_IMG - 1) / 2.0;
-    double pos_ray_on_t;
     const double t_center = (NUM_DETECT - 1) / 2.0;
 
     // 本来はcudaなどの並列計算により, iterationを回すたびにシステム行列の要素を計算する．
-    for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
-        // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
-        // pixel driven back projection
-        for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
-            for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
-                pos_ray_on_t =
-                        (j_pic - x_rotate_center) * std::cos(theta) + (i_pic - y_rotate_center) * std::sin(theta)
-                        + t_center;
+
+    // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
+    // pixel driven back projection
+    // exchangeable loop
+    for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
+        for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
+            // theta <- 0
+            theta = 0;
+            double C_prob = 0; // 検出確率の総和
+            float adder_to_img = 0; // 画像への影響値
+
+            for (int k_proj = 0; k_proj < NUM_PROJ; ++k_proj) {
+                const double pos_ray_on_t = (j_pic - x_rotate_center) * std::cos(theta)
+                                            + (i_pic - y_rotate_center) * std::sin(theta) + t_center;
                 const int t_floor = static_cast<int>(std::floor(pos_ray_on_t));
 
-                float adder_to_img = 0;
                 if (pos_ray_on_t > 0.0 && pos_ray_on_t < NUM_DETECT - 1) {
                     // Linear interpolation
-                    adder_to_img = static_cast<float>(
-                            (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t) +
+                    adder_to_img += static_cast<float>(
+                            (b_proj[NUM_DETECT * k_proj + t_floor] * (1 - (pos_ray_on_t - t_floor)) +
                              b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)));
+                    C_prob += 1 - (pos_ray_on_t - t_floor);
+                    C_prob += pos_ray_on_t - t_floor;
                 } else if (pos_ray_on_t > -0.5 && pos_ray_on_t <= 0.0) { // corner case on using std::floor
-                    adder_to_img = static_cast<float>(
+                    adder_to_img += static_cast<float>(
                             (b_proj[NUM_DETECT * k_proj + t_floor + 1] * (pos_ray_on_t - t_floor)));
+                    C_prob += pos_ray_on_t - t_floor;
                 } else if (pos_ray_on_t >= NUM_DETECT - 1 && pos_ray_on_t < NUM_DETECT - 1 + 0.5) {
-                    adder_to_img = static_cast<float>(
+                    adder_to_img += static_cast<float>(
                             (b_proj[NUM_DETECT * k_proj + t_floor] * (t_floor + 1 - pos_ray_on_t)));
+                    C_prob += 1 - (pos_ray_on_t - t_floor);
                 }
 
-                x_img[W_IMG * i_pic + j_pic] += adder_to_img / NUM_PROJ;
+                // loop proj
+                theta += D_THETA;
             }
+            x_img[W_IMG * i_pic + j_pic] = adder_to_img * D_THETA / C_prob;
         }
-        theta += D_THETA;
     }
 }
 
@@ -60,7 +71,6 @@ void ParallelForwardProj(const std::vector<float> &x_img, std::vector<float> &b_
         // i, jは再構成画像のpixelのちょうど中心の座標を意味する.(not 格子点)
         // pixel driven back projection
         // std::vector<std::stack<std::pair<float, int>>> A_sparse(NUM_DETECT);
-
         for (int i_pic = 0; i_pic < H_IMG; ++i_pic) {
             for (int j_pic = 0; j_pic < W_IMG; ++j_pic) {
                 pos_ray_on_t =
@@ -211,6 +221,10 @@ void ART(std::vector<float> &x_img, const std::vector<float> &b_proj) {
         }
         theta += D_THETA;
     }*/
+}
+
+void MLEM(std::vector<float> &x_img, const std::vector<float> &b_proj, const int iter) {
+
 }
 
 void Normalize(std::vector<float> &vec, const float max) {

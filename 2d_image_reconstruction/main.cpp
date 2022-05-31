@@ -12,8 +12,8 @@
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);
-    std::vector<float> b_proj(NUM_DETECT * NUM_PROJ);
-    std::vector<float> parallel(NUM_DETECT * NUM_PROJ);
+    std::vector<float> b_proj(NUM_DETECT * NUM_PROJ, 0);
+    std::vector<float> parallel(NUM_DETECT * NUM_PROJ, 0);
 
     // load image binary
     std::filesystem::path cur_path = std::filesystem::current_path();
@@ -50,18 +50,17 @@ int main() {
     Fan2Para(b_proj, parallel);
     ParallelBackProj(parallel, x_image);
 
-    // SIRT(x_image, b_proj, 0.001, 100);
-
     // --------------- end processing ---------------
+    /*
     for (auto &e: x_image) {
         if (e < 0) {
             e = 0;
         }
     }
-
     Normalize(x_image, 1.0);
+    */
 
-    cv::Mat img(b_proj);
+    cv::Mat img(x_image);
     cv::Mat prj(parallel);
 
     // v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]→
@@ -70,20 +69,21 @@ int main() {
     //                    9, 10, 11, 12]
     // 表示もこの行列の通りに表示される
 
-    cv::Mat img_show = img.reshape(1, NUM_PROJ);
+    cv::Mat img_show = img.reshape(1, H_IMG);
     cv::Mat prj_show = prj.reshape(1, NUM_PROJ);
     cv::imshow("img", img_show);
     cv::imshow("parallel", prj_show);
 
     cv::waitKey(0);
 
-    std::ofstream ofs("../2d_images_bin/para-470x400.raw", std::ios::binary);
+    std::ofstream ofs("../2d_images_bin/para_image-470x470.raw", std::ios::binary);
     if (!ofs) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;
         return 0;
     }
-    // ofs.write(reinterpret_cast<char *>(parallel.data()), sizeof(float) * NUM_PROJ * NUM_DETECT);
+
+    ofs.write(reinterpret_cast<char *>(x_image.data()), sizeof(float) * H_IMG * W_IMG);
 
     return 0;
 }
