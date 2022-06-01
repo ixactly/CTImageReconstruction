@@ -6,6 +6,11 @@
 #include <Volume.h>
 
 int main() {
-    Volume<float> v;
-    v.show();
+    Volume<float> sinogram;
+    Volume<float> ct;
+
+    sinogram.load("../volume_bin/sphere-tori-float-500x500x500.raw", 500, 500, 500);
+    sinogram.show(250);
+
+
 }

@@ -1,0 +1,11 @@
+//
+// Created by 森智希 on 2022/06/02.
+//
+
+#ifndef INC_3DRECONSTRUCTION_GEOMETRY_H
+#define INC_3DRECONSTRUCTION_GEOMETRY_H
+
+class Geometry {
+
+};
+#endif //INC_3DRECONSTRUCTION_GEOMETRY_H
