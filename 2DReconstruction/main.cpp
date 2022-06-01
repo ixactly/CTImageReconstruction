@@ -53,7 +53,7 @@ int main() {
         }
     }
 
-    for (int iter = 0; iter < 50; iter++) MLEM(x_image, parallel);
+    for (int iter = 0; iter < 10; iter++) MLEM(x_image, parallel);
     ParallelForwardProj(x_image, parallel);
     // --------------- end processing ---------------
 
