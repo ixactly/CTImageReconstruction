@@ -16,7 +16,7 @@ int main() {
 
     MLEM<float> mlem;
     mlem.reconstruct(sinogram, ct, geom);
-    sinogram.show(250);
+    ct.show(NUM_VOXEL/2);
 
 
 
