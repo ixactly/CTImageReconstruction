@@ -4,13 +4,20 @@
 
 #include <iostream>
 #include <Volume.h>
+#include <MLEM.h>
+#include <Geometry.h>
+#include <Params.h>
 
 int main() {
-    Volume<float> sinogram;
-    Volume<float> ct;
+    Volume<float> sinogram(NUM_DETECT_U, NUM_DETECT_V, NUM_PROJ);
+    Volume<float> ct(NUM_VOXEL, NUM_VOXEL, NUM_VOXEL);
+    Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
+    // sinogram.load("../volume_bin/sphere-tori-float-500x500x500.raw", 500, 500, 500);
 
-    sinogram.load("../volume_bin/sphere-tori-float-500x500x500.raw", 500, 500, 500);
+    MLEM(sinogram, ct, geom);
     sinogram.show(250);
+
+
 
 
 }

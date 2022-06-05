@@ -11,6 +11,7 @@
 #include <fstream>
 #include <opencv2/opencv.hpp>
 #include <functional>
+#include "Utils.h"
 
 template<typename T>
 class Volume {
@@ -99,6 +100,11 @@ public :
                 }
             }
         }
+    }
+
+    Vec3i size() const {
+        Vec3i vec = {static_cast<int>(sizeX), static_cast<int>(sizeY), static_cast<int>(sizeZ)};
+        return vec;
     }
 
 private :
