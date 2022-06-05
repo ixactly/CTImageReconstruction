@@ -9,7 +9,7 @@
 #include <functional>
 
 template<typename T>
-void ELEM(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom) {
+void MLEM(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom) {
     Vec3i s = sinogram.size();
     Vec3i vSize = voxel.size();
     Volume<T> volTmp(vSize[0], vSize[1], vSize[2]);
@@ -30,7 +30,7 @@ void ELEM(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom) {
                     // forward projection
                     auto [u, v] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
                     if (geom.isHitDetect(u, v)) {
-                        lerpScatter(u, v, projTmp, voxel(x, y, z)); //need impl
+                        lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
                     }
                 }
             }

@@ -10,7 +10,6 @@
 #include <cmath>
 #include "Utils.h"
 
-
 class Geometry {
 
 public:

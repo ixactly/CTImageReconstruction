@@ -14,7 +14,8 @@ int main() {
     Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
     // sinogram.load("../volume_bin/sphere-tori-float-500x500x500.raw", 500, 500, 500);
 
-    MLEM(sinogram, ct, geom);
+    MLEM<float> mlem;
+    mlem.reconstruct(sinogram, ct, geom);
     sinogram.show(250);
 
 
