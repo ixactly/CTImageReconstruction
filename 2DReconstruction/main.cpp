@@ -17,7 +17,7 @@ int main() {
 
     // load image binary
     std::filesystem::path cur_path = std::filesystem::current_path();
-    std::ifstream ifile("../2d_images_bin/elephant-470x400.raw", std::ios::binary);
+    std::ifstream ifile("../2d_images_bin/sphere-tori-float-500x500.raw", std::ios::binary);
     if (!ifile) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;
@@ -53,7 +53,7 @@ int main() {
         }
     }
 
-    for (int iter = 0; iter < 10; iter++) MLEM(x_image, parallel);
+    for (int iter = 0; iter < 50; iter++) MLEM(x_image, parallel);
     ParallelForwardProj(x_image, parallel);
     // --------------- end processing ---------------
 
@@ -75,7 +75,7 @@ int main() {
 
     cv::waitKey(0);
 
-    std::ofstream ofs("../2d_images_bin/elem_img-470x470.raw", std::ios::binary);
+    std::ofstream ofs("../2d_images_bin/sphere-tori-image-mlem50-500x500.raw", std::ios::binary);
     if (!ofs) {
         std::cout << "file not opened" << std::endl;
         std::cout << cur_path.string() << std::endl;
