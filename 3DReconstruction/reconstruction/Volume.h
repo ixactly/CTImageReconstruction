@@ -18,12 +18,12 @@ class Volume {
 public :
     Volume() = default;
 
-    explicit Volume(uint32_t sizeX, uint32_t sizeY, uint32_t sizeZ)
+    explicit Volume(int sizeX, int sizeY, int sizeZ)
             : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ) {
         data = std::make_unique<T[]>(sizeX * sizeY * sizeZ);
     }
 
-    explicit Volume(std::string &filename, uint32_t sizeX, uint32_t sizeY, uint32_t sizeZ)
+    explicit Volume(std::string &filename, int sizeX, int sizeY, int sizeZ)
             : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ) {
         // implement
         load(filename, sizeX, sizeY, sizeZ);
@@ -31,14 +31,14 @@ public :
 
     Volume(const Volume &v)
             : sizeX(v.sizeX), sizeY(v.sizeY), sizeZ(v.sizeZ) {
-        const uint32_t size = v.sizeX * v.sizeY * v.sizeZ;
-        std::memcpy(data.get(), v.data.get(), size * sizeof(uint32_t));
+        const int size = v.sizeX * v.sizeY * v.sizeZ;
+        std::memcpy(data.get(), v.data.get(), size * sizeof(T));
     }
 
     Volume &operator=(const Volume &v) {
         sizeX = v.sizeX, sizeY = v.sizeY, sizeZ = v.sizeZ;
-        const uint32_t size = v.sizeX * v.sizeY * v.sizeZ;
-        std::memcpy(data.get(), v.data.get(), size * sizeof(uint32_t));
+        const int size = v.sizeX * v.sizeY * v.sizeZ;
+        std::memcpy(data.get(), v.data.get(), size * sizeof(T));
 
         return *this;
     }
@@ -59,32 +59,42 @@ public :
     ~Volume() = default;
 
     // ref data (mutable)
-    T &operator()(uint32_t x, uint32_t y, uint32_t z) {
+    T &operator()(int x, int y, int z) {
         return data[z * (sizeX * sizeY) + y * (sizeX) + x];
     }
 
-    T operator()(uint32_t x, uint32_t y, uint32_t z) const {
+    T operator()(int x, int y, int z) const {
         return data[z * (sizeX * sizeY) + y * (sizeX) + x];
     }
 
     // show the slice of center
-    void show(const uint32_t slice) { // opencv and unique ptr(need use shared ptr?)
+    void show(const int slice) { // opencv and unique ptr(need use shared ptr?)
         // axis決めるのはメモリの並び的にだるいっす.
         cv::Mat xyPlane(sizeX, sizeY, cv::DataType<T>::type, data.get() + slice * (sizeX * sizeY));
 
-        cv::imshow("slice voxel", xyPlane);
+        cv::imshow("slice", xyPlane);
         cv::waitKey(0);
     }
 
-    void load(const std::string &filename, const uint32_t x, const uint32_t y, const uint32_t z) {
+    void load(const std::string &filename, const int x, const int y, const int z) {
         // impl
         sizeX = x, sizeY = y, sizeZ = z;
-        const uint32_t size = x * y * z;
+        const int size = x * y * z;
         data.reset();
         data = std::make_unique<T[]>(size);
         std::ifstream ifile(filename, std::ios::binary);
 
         ifile.read(reinterpret_cast<char *>(data.get()), sizeof(T) * size);
+    }
+
+    void save(const std::string &filename) {
+        const int size = sizeX * sizeY * sizeZ;
+        std::ofstream ofs(filename, std::ios::binary);
+        if (!ofs) {
+            std::cout << "file not opened" << std::endl;
+            return;
+        }
+        ofs.write(reinterpret_cast<char *>(data.get()), sizeof(T) * size);
     }
 
     void transpose() {
@@ -108,7 +118,7 @@ public :
     }
 
 private :
-    uint32_t sizeX, sizeY, sizeZ;
+    int sizeX, sizeY, sizeZ;
     std::unique_ptr<T[]> data = nullptr;
 };
 
