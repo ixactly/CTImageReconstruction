@@ -30,7 +30,7 @@ public :
         double theta;
 
         // forward proj
-// #pragma omp parallel for
+
         for (int n = 0; n < nProj; n++) {
             for (int z = 0; z < vSize[2]; z++) {
                 for (int y = 0; y < vSize[1]; y++) {
@@ -76,8 +76,8 @@ public :
         double theta;
 
         // forward proj
+#pragma omp parallel for
         for (int n = 0; n < nProj; n++) {
-
             for (int z = 0; z < vSize[2]; z++) {
                 for (int y = 0; y < vSize[1]; y++) {
                     for (int x = 0; x < vSize[0]; x++) {

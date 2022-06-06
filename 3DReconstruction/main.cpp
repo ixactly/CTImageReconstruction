@@ -8,8 +8,10 @@
 #include <MLEM.h>
 #include <Geometry.h>
 #include <Params.h>
+#include <chrono>
 
 int main() {
+
     Volume<float> sinogram(NUM_DETECT_U, NUM_DETECT_V, NUM_PROJ);
     Volume<float> ct(NUM_VOXEL, NUM_VOXEL, NUM_VOXEL);
     Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
@@ -24,7 +26,18 @@ int main() {
     }
 
     MLEM<float> mlem;
+
+    // measure clock
+    std::chrono::system_clock::time_point start, end;
+    start = std::chrono::system_clock::now();
+
+    // main function
     mlem.forwardproj(sinogram, ct, geom);
+
+
+    end = std::chrono::system_clock::now();
+    double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / (1000.0 * 1000.0));
+    std::cout << time << std::endl;
 
     ct.show(NUM_VOXEL/2);
     // sinogram.show(0);
