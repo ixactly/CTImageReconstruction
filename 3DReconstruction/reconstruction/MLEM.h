@@ -76,14 +76,14 @@ public :
         double theta;
 
         // forward proj
-#pragma omp parallel for
+#pragma omp parallel for // parallelの位置
         for (int n = 0; n < nProj; n++) {
             for (int z = 0; z < vSize[2]; z++) {
                 for (int y = 0; y < vSize[1]; y++) {
                     for (int x = 0; x < vSize[0]; x++) {
                         theta = 2.0 * M_PI * n / nProj;
                         // forward projection
-                        auto [u, v] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
+                        auto [u, v] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta); // thetaの渡す場所
                         if (geom.isHitDetect(u, v, sinogram.size())) {
                             lerpScatter(u, v, n, sinogram, voxel(x, y, z)); //need impl
                         }
