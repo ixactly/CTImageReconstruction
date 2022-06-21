@@ -25,35 +25,40 @@ public:
         voxSize = sod * detSize / sdd;
     }
 
-    std::pair<double, double>
+    std::tuple<double, double, double>
     vox2det(const int x, const int y, const int z, const Vec3i &sizeV, const Vec3i &sizeD,
             double theta) const {
         // impl
         // (x+0.5f, y+0.5f, z+0.5f), source point間の関係からdetのu, vを算出
         // detectorの底辺と光源のz座標は一致していると仮定
 
-        Vec3d vecSod = {std::sin(theta) * sod, -std::cos(theta) * sod, 0};
+        Vec3d vecSod = {std::sin(theta) * sod, -std::cos(theta) * sod, sizeV[2] * 0.5 * voxSize};
         Vec3d src2cent = {-vecSod[0], -vecSod[1], sizeV[2] * 0.5 * voxSize - vecSod[2]};
         Vec3d src2voxel = {(2 * x - sizeV[0] + 1) * 0.5 * voxSize + src2cent[0],
                            (2 * y - sizeV[1] + 1) * 0.5 * voxSize + src2cent[1],
                            (2 * z - sizeV[2] + 1) * 0.5 * voxSize + src2cent[2]}; // a
 
-        double beta_tmp = std::atan2(src2voxel[0], src2voxel[1]);
         double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
-                      (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
-                       std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
-        int signature = sign(src2voxel[0]*src2cent[1] - src2voxel[1]*src2cent[0]); // src2voxel x src2cent
+                                (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
+                                 std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
+        int signature = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]); // src2voxel x src2cent
         double gamma = std::atan2(src2voxel[2], std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1]));
 
-        double u = std::tan(signature*beta) * sdd / detSize + sizeD[0] * 0.5;
-        double v = std::tan(gamma) * sdd / std::cos(beta) / detSize; // normalization
+        double u = std::tan(signature * beta) * sdd / detSize + sizeD[0] * 0.5;
+        double v = std::tan(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5; // normalization
 
-        return std::make_pair(u, v);
+        return std::make_tuple(u, v, beta);
     }
 
     bool isHitDetect(const double u, const double v, const Vec3i &sizeD) const {
         // impl
-        if (0 < u && u < sizeD[0] && 0 < v && v < sizeD[1])
+        /*
+        if (0.5 < u && u < sizeD[0] - 0.5 && 0.5 < v && v < sizeD[1] - 0.5)
+            return true;
+        else
+            return false;
+        */
+        if (0.5 < u && u < sizeD[0] - 0.5 && 0 < v && v < sizeD[1])
             return true;
         else
             return false;
