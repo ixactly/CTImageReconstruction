@@ -17,26 +17,27 @@ class MLEM {
 public :
     MLEM() = default;
 
-    void reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom) {
+    void reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int iter) {
         Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
         Volume<T> projTmp(dSize[0], dSize[1], dSize[2]);
 
         voxel.forEach([](T value) -> T { return 1.0; });
-        projTmp.forEach([](T value) -> T { return 0.0; });
 
         int nProj = dSize[2];
         double theta;
 
-        int iter = 10;
-        for (int i = 0; i < iter ; i++) {
+        for (int i = 0; i < iter; i++) {
+            projTmp.forEach([](T value) -> T { return 0.0; });
             // forward proj
             for (int n = 0; n < nProj; n++) {
-                theta = 2.0 * M_PI * n / nProj;
+                theta = -2.0 * M_PI * n / nProj;
                 for (int z = 0; z < vSize[2]; z++) {
                     for (int y = 0; y < vSize[1]; y++) {
                         for (int x = 0; x < vSize[0]; x++) {
                             // forward projection
+
+                            // vox2detとisHitDetectは合体させたい
                             auto [u, v, beta] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
                             if (geom.isHitDetect(u, v, sinogram.size())) {
                                 lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
@@ -62,7 +63,7 @@ public :
                         double c = 0;
                         T voxTmp = 0;
                         for (int n = 0; n < nProj; n++) {
-                            theta = 2.0 * M_PI * n / nProj;
+                            theta = -2.0 * M_PI * n / nProj;
                             auto [u, v, beta] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
                             if (geom.isHitDetect(u, v, sinogram.size())) {
                                 auto [c1, c2, c3, c4] = lerpGather(u, v, n, projTmp, voxTmp);
@@ -88,7 +89,7 @@ public :
         // forward proj
 // #pragma omp parallel for // parallelの位置
         for (int n = 0; n < nProj; n++) {
-            theta = 2.0 * M_PI * n / nProj;
+            theta = -2.0 * M_PI * n / nProj;
             for (int z = 0; z < vSize[2]; z++) {
                 for (int y = 0; y < vSize[1]; y++) {
                     for (int x = 0; x < vSize[0]; x++) {
@@ -118,14 +119,14 @@ public :
         */
 
         // 2d
-        double u_tmp = u - 0.5, v_tmp = v;
+        double u_tmp = u - 0.5, v_tmp = v - 0.5;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
                 c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
 
         val += c1 * proj(intU, intV, n) + c2 * proj(intU + 1, intV, n) + c3 * proj(intU + 1, intV, n) +
                c4 * proj(intU, intV, n);
-
+        // 2d end
 
         return std::make_tuple(c1, c2, c3, c4);
     }
@@ -156,6 +157,48 @@ public :
         proj(intU, intV, n) += c4 * val;
 
         return std::make_tuple(c1, c2, c3, c4);
+    }
+
+    void nearestGather(const double u, const double v, const int n, const Volume<T> &proj,
+                       T &val) { // normalize u, v on vox2det
+        /* correct
+        double u_tmp = u - 0.5, v_tmp = v - 0.5;
+        int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
+        double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+
+        val += c1 * proj(intU, intV + 1, n) + c2 * proj(intU + 1, intV + 1, n) + c3 * proj(intU + 1, intV, n) +
+               c4 * proj(intU, intV, n);
+        */
+
+        // 2d
+        double u_tmp = u - 0.5, v_tmp = v;
+        int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
+        double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+
+        val += proj(intU, intV, n);
+
+    }
+
+    void nearestScatter(const double u, const double v, const int n, Volume<T> &proj, const T &val) {
+        /*
+        double u_tmp = u - 0.5, v_tmp = v - 0.5;
+        int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
+        double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+
+        proj(intU, intV + 1, n) += c1 * val;
+        proj(intU + 1, intV + 1, n) += c2 * val;
+        proj(intU + 1, intV, n) += c3 * val;
+        proj(intU, intV, n) += c4 * val;
+         */
+
+        // 2d
+        double u_tmp = u - 0.5, v_tmp = v;
+        int intU = static_cast<int>(std::round(u_tmp)), intV = std::floor(v_tmp);
+
+        proj(intU, intV, n) += val;
     }
 };
 

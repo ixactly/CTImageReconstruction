@@ -29,23 +29,32 @@ public:
     vox2det(const int x, const int y, const int z, const Vec3i &sizeV, const Vec3i &sizeD,
             double theta) const {
         // impl
-        // (x+0.5f, y+0.5f, z+0.5f), source point間の関係からdetのu, vを算出
-        // detectorの底辺と光源のz座標は一致していると仮定
 
-        Vec3d vecSod = {std::sin(theta) * sod, -std::cos(theta) * sod, sizeV[2] * 0.5 * voxSize};
+        // sourceとvoxel座標間の関係からdetのu, vを算出
+        // detectorの中心 と 再構成領域の中心 と 光源 のz座標は一致していると仮定
+        Vec3d offset = {0.0, 0.0, 0.0};
+        Vec3d vecSod = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1], sizeV[2] * 0.5 * voxSize};
+        // Source to voxel center
         Vec3d src2cent = {-vecSod[0], -vecSod[1], sizeV[2] * 0.5 * voxSize - vecSod[2]};
+        // Source to voxel
         Vec3d src2voxel = {(2 * x - sizeV[0] + 1) * 0.5 * voxSize + src2cent[0],
                            (2 * y - sizeV[1] + 1) * 0.5 * voxSize + src2cent[1],
                            (2 * z - sizeV[2] + 1) * 0.5 * voxSize + src2cent[2]}; // a
 
-        double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
+        const double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
                                 (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
                                  std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
-        int signature = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]); // src2voxel x src2cent
-        double gamma = std::atan2(src2voxel[2], std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1]));
+        const double gamma = std::acos((src2cent[1] * src2voxel[1] + src2cent[2] * src2voxel[2]) /
+                                      (std::sqrt(src2cent[1] * src2cent[1] + src2cent[2] * src2cent[2]) *
+                                       std::sqrt(src2voxel[1] * src2voxel[1] + src2voxel[2] * src2voxel[2])));
 
-        double u = std::tan(signature * beta) * sdd / detSize + sizeD[0] * 0.5;
-        double v = std::tan(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5; // normalization
+        const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
+        const int signV = sign(src2voxel[2] * src2cent[1] - src2voxel[1] * src2cent[2]);
+        // src2voxel x src2cent
+
+        // 光線がhitするdetector平面座標の算出(detectorSizeで除算して、正規化済み)
+        double u = std::tan(signU * beta) * sdd / detSize + sizeD[0] * 0.5;
+        double v = std::tan(signV * gamma) * sdd / detSize + sizeD[1] * 0.5; // normalization
 
         return std::make_tuple(u, v, beta);
     }
@@ -58,6 +67,8 @@ public:
         else
             return false;
         */
+
+        // modified condition for 2d (v)
         if (0.5 < u && u < sizeD[0] - 0.5 && 0 < v && v < sizeD[1])
             return true;
         else
