@@ -4,11 +4,12 @@
 
 #include <iostream>
 #include <string>
-#include <Volume.h>
-#include <MLEM.h>
-#include <Geometry.h>
-#include <Params.h>
+#include "Volume.h"
+#include "MLEM.h"
+#include "Geometry.h"
+#include "Params.h"
 #include <chrono>
+#include "pbar.h"
 
 int main() {
 
@@ -28,15 +29,15 @@ int main() {
     }
      */
 
-    MLEM<float> mlem;
-
     // measure clock
     std::chrono::system_clock::time_point start, end;
     start = std::chrono::system_clock::now();
 
     // main function
+
+    MLEM<float> mlem;
     // mlem.forwardproj(sinogram, ctGT, geom);
-    mlem.reconstruct(sinogram, ct, geom, 1, 64);
+    mlem.reconstruct(sinogram, ct, geom, 5, 50);
 
     end = std::chrono::system_clock::now();
     double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / (1000.0 * 1000.0));

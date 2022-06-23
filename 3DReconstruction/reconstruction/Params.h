@@ -12,7 +12,7 @@ inline double SRC_DETECT_DISTANCE = 1519.739;
 inline int NUM_PROJ = 1000;
 
 inline int NUM_DETECT_U = 1024;
-inline int NUM_DETECT_V = 1;
+inline int NUM_DETECT_V = 1024;
 
 inline double DETECTOR_SIZE = 0.4 * 1024 / NUM_DETECT_U;
 

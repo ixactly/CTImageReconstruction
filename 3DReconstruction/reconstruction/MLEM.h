@@ -8,8 +8,12 @@
 #include "Geometry.h"
 #include "Volume.h"
 #include "Utils.h"
+#include "Pbar.h"
 #include <functional>
 #include <utility>
+#include <random>
+#include <algorithm>
+#include <vector>
 #include <omp.h>
 
 template<typename T>
@@ -17,8 +21,12 @@ class MLEM {
 public :
     MLEM() = default;
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "openmp-use-default-none"
     void
     reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch) {
+        std::cout << "reconstruction by mlem..." << std::endl;
+
         Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
         Volume<T> projTmp(dSize[0], dSize[1], dSize[2]);
@@ -29,14 +37,25 @@ public :
         double theta;
 
         int subsetSize = (nProj + batch - 1) / batch;
+        std::vector<int> subsetOrder(batch);
+        for (int i = 0; i < batch; i++) {
+            subsetOrder[i] = i;
+        }
+
+        progressbar pbar(epoch*batch);
+
+        std::mt19937_64 get_rand_mt; // fixed seed
+        std::shuffle(subsetOrder.begin(), subsetOrder.end(), get_rand_mt);
 
         // main routine
         for (int ep = 0; ep < epoch; ep++) {
-            for (int sub = 0; sub < batch; sub++) {
+            for (int& sub : subsetOrder) {
+                pbar.update();
                 projTmp.forEach([](T value) -> T { return 0.0; });
                 // forward proj
-                for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
-                    int n = (sub + batch * projOrder) % nProj;
+#pragma omp parallel for
+                for (int subOrder = 0; subOrder < subsetSize; subOrder++) {
+                    int n = (sub + batch * subOrder) % nProj;
                     for (int z = 0; z < vSize[2]; z++) {
                         for (int y = 0; y < vSize[1]; y++) {
                             for (int x = 0; x < vSize[0]; x++) {
@@ -81,6 +100,7 @@ public :
             }
         }
     }
+#pragma clang diagnostic pop
 
     void forwardproj(Volume<T> &sinogram, const Volume<T> &voxel, const Geometry &geom) {
         Vec3i s = sinogram.size();
@@ -89,7 +109,7 @@ public :
         // Volume<T> projTmp(s[0], s[1], s[2]);
 
         int nProj = s[2];
-        double theta = 0;
+        double theta;
 
         // forward proj
 // #pragma omp parallel for // parallelの位置
@@ -100,7 +120,7 @@ public :
                     for (int x = 0; x < vSize[0]; x++) {
 
                         // forward projection
-                        auto [u, v, beta] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta); // thetaの渡す場所
+                        auto [u, v] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta); // thetaの渡す場所
                         if (geom.isHitDetect(u, v, sinogram.size())) {
                             lerpScatter(u, v, n, sinogram, voxel(x, y, z)); //need impl
                         }

@@ -20,4 +20,4 @@ endif ()
 add_subdirectory(./reconstruction)
 
 add_executable(3DReconstruction main.cpp)
-target_link_libraries(3DReconstruction PRIVATE ${OpenCV_LIBS} ReconUtil)
+target_link_libraries(3DReconstruction PRIVATE ${OpenCV_LIBS} reconst)
