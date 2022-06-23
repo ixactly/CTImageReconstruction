@@ -17,7 +17,8 @@ class MLEM {
 public :
     MLEM() = default;
 
-    void reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int iter) {
+    void
+    reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch) {
         Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
         Volume<T> projTmp(dSize[0], dSize[1], dSize[2]);
@@ -27,50 +28,54 @@ public :
         int nProj = dSize[2];
         double theta;
 
-        for (int i = 0; i < iter; i++) {
-            projTmp.forEach([](T value) -> T { return 0.0; });
-            // forward proj
-            for (int n = 0; n < nProj; n++) {
-                theta = -2.0 * M_PI * n / nProj;
+        int subsetSize = (nProj + batch - 1) / batch;
+
+        // main routine
+        for (int ep = 0; ep < epoch; ep++) {
+            for (int sub = 0; sub < batch; sub++) {
+                projTmp.forEach([](T value) -> T { return 0.0; });
+                // forward proj
+                for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
+                    int n = (sub + batch * projOrder) % nProj;
+                    for (int z = 0; z < vSize[2]; z++) {
+                        for (int y = 0; y < vSize[1]; y++) {
+                            for (int x = 0; x < vSize[0]; x++) {
+                                // forward projection
+                                auto [u, v] = geom.vox2det(x, y, z, -n, sinogram.size(), voxel.size());
+                                if (geom.isHitDetect(u, v, sinogram.size())) {
+                                    lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // calculate ratio of projection
+                for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
+                    int n = (sub + batch * projOrder) % nProj;
+                    for (int u = 0; u < dSize[0]; u++) {
+                        for (int v = 0; v < dSize[1]; v++) {
+                            projTmp(u, v, n) = sinogram(u, v, n) / projTmp(u, v, n);
+                        }
+                    }
+                }
+
+                // back proj (y'/y)
                 for (int z = 0; z < vSize[2]; z++) {
                     for (int y = 0; y < vSize[1]; y++) {
                         for (int x = 0; x < vSize[0]; x++) {
-                            // forward projection
-
-                            // vox2detとisHitDetectは合体させたい
-                            auto [u, v, beta] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
-                            if (geom.isHitDetect(u, v, sinogram.size())) {
-                                lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
+                            double c = 0;
+                            T voxTmp = 0;
+                            for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
+                                int n = (sub + batch * projOrder) % nProj;
+                                auto [u, v] = geom.vox2det(x, y, z, -n, sinogram.size(), voxel.size());
+                                if (geom.isHitDetect(u, v, sinogram.size())) {
+                                    auto [c1, c2, c3, c4] = lerpGather(u, v, n, projTmp, voxTmp);
+                                    c += c1 + c2 + c3 + c4;
+                                }
                             }
+                            voxel(x, y, z) = voxTmp * voxel(x, y, z) / c;
                         }
-                    }
-                }
-            }
-
-            // calculate ratio of projection
-            for (int n = 0; n < nProj; n++) {
-                for (int u = 0; u < dSize[0]; u++) {
-                    for (int v = 0; v < dSize[1]; v++) {
-                        projTmp(u, v, n) = sinogram(u, v, n) / projTmp(u, v, n);
-                    }
-                }
-            }
-
-            // back proj (y'/y)
-            for (int z = 0; z < vSize[2]; z++) {
-                for (int y = 0; y < vSize[1]; y++) {
-                    for (int x = 0; x < vSize[0]; x++) {
-                        double c = 0;
-                        T voxTmp = 0;
-                        for (int n = 0; n < nProj; n++) {
-                            theta = -2.0 * M_PI * n / nProj;
-                            auto [u, v, beta] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta);
-                            if (geom.isHitDetect(u, v, sinogram.size())) {
-                                auto [c1, c2, c3, c4] = lerpGather(u, v, n, projTmp, voxTmp);
-                                c += c1 + c2 + c3 + c4;
-                            }
-                        }
-                        voxel(x, y, z) = voxTmp * voxel(x, y, z) / c;
                     }
                 }
             }
@@ -131,7 +136,7 @@ public :
         return std::make_tuple(c1, c2, c3, c4);
     }
 
-    std::tuple<double, double, double, double>
+    void
     lerpScatter(const double u, const double v, const int n, Volume<T> &proj, const T &val) {
         /*
         double u_tmp = u - 0.5, v_tmp = v - 0.5;
@@ -156,7 +161,6 @@ public :
         proj(intU + 1, intV, n) += c3 * val;
         proj(intU, intV, n) += c4 * val;
 
-        return std::make_tuple(c1, c2, c3, c4);
     }
 
     void nearestGather(const double u, const double v, const int n, const Volume<T> &proj,

@@ -25,15 +25,17 @@ public:
         voxSize = sod * detSize / sdd;
     }
 
-    std::tuple<double, double, double>
-    vox2det(const int x, const int y, const int z, const Vec3i &sizeV, const Vec3i &sizeD,
-            double theta) const {
+    [[nodiscard]] std::pair<double, double>
+    vox2det(const int x, const int y, const int z, const int n, const Vec3i &sizeD, const Vec3i &sizeV
+    ) const {
         // impl
 
         // sourceとvoxel座標間の関係からdetのu, vを算出
         // detectorの中心 と 再構成領域の中心 と 光源 のz座標は一致していると仮定
+        const double theta = 2 * M_PI * n / sizeD[2];
         Vec3d offset = {0.0, 0.0, 0.0};
-        Vec3d vecSod = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1], sizeV[2] * 0.5 * voxSize};
+        Vec3d vecSod = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1],
+                        sizeV[2] * 0.5 * voxSize};
         // Source to voxel center
         Vec3d src2cent = {-vecSod[0], -vecSod[1], sizeV[2] * 0.5 * voxSize - vecSod[2]};
         // Source to voxel
@@ -42,11 +44,11 @@ public:
                            (2 * z - sizeV[2] + 1) * 0.5 * voxSize + src2cent[2]}; // a
 
         const double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
-                                (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
-                                 std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
+                                      (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
+                                       std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
         const double gamma = std::acos((src2cent[1] * src2voxel[1] + src2cent[2] * src2voxel[2]) /
-                                      (std::sqrt(src2cent[1] * src2cent[1] + src2cent[2] * src2cent[2]) *
-                                       std::sqrt(src2voxel[1] * src2voxel[1] + src2voxel[2] * src2voxel[2])));
+                                       (std::sqrt(src2cent[1] * src2cent[1] + src2cent[2] * src2cent[2]) *
+                                        std::sqrt(src2voxel[1] * src2voxel[1] + src2voxel[2] * src2voxel[2])));
 
         const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
         const int signV = sign(src2voxel[2] * src2cent[1] - src2voxel[1] * src2cent[2]);
@@ -56,7 +58,7 @@ public:
         double u = std::tan(signU * beta) * sdd / detSize + sizeD[0] * 0.5;
         double v = std::tan(signV * gamma) * sdd / detSize + sizeD[1] * 0.5; // normalization
 
-        return std::make_tuple(u, v, beta);
+        return std::make_pair(u, v);
     }
 
     bool isHitDetect(const double u, const double v, const Vec3i &sizeD) const {

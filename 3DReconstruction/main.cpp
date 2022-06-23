@@ -36,13 +36,12 @@ int main() {
 
     // main function
     // mlem.forwardproj(sinogram, ctGT, geom);
-    mlem.reconstruct(sinogram, ct, geom, 1);
+    mlem.reconstruct(sinogram, ct, geom, 1, 64);
 
     end = std::chrono::system_clock::now();
     double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / (1000.0 * 1000.0));
     std::cout << "time: " << time << " (s)" << std::endl;
 
-    sinogram.show(0);
     ct.show(0);
 
     /*
@@ -51,6 +50,6 @@ int main() {
             std::to_string(NUM_PROJ) + ".raw";
     */
     std::string savefilePath =
-            "../volume_bin/yuki1mlem-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
+            "../volume_bin/emos_yuki-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
     ct.save(savefilePath);
 }
