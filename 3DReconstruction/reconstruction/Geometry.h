@@ -63,16 +63,7 @@ public:
 
     bool isHitDetect(const double u, const double v, const Vec3i &sizeD) const {
         // impl
-        /*
         if (0.5 < u && u < sizeD[0] - 0.5 && 0.5 < v && v < sizeD[1] - 0.5)
-            return true;
-        else
-            return false;
-        */
-
-        // modified condition for 2d (v)
-
-        if (0.5 < u && u < sizeD[0] - 0.5 && 0 < v && v < sizeD[1])
             return true;
         else
             return false;

@@ -42,7 +42,7 @@ public :
             subsetOrder[i] = i;
         }
 
-        progressbar pbar(epoch*batch);
+        progressbar pbar(epoch*nProj);
 
         std::mt19937_64 get_rand_mt; // fixed seed
         std::shuffle(subsetOrder.begin(), subsetOrder.end(), get_rand_mt);
@@ -50,11 +50,12 @@ public :
         // main routine
         for (int ep = 0; ep < epoch; ep++) {
             for (int& sub : subsetOrder) {
-                pbar.update();
                 projTmp.forEach([](T value) -> T { return 0.0; });
                 // forward proj
 #pragma omp parallel for
                 for (int subOrder = 0; subOrder < subsetSize; subOrder++) {
+#pragma omp critical
+                    pbar.update();
                     int n = (sub + batch * subOrder) % nProj;
                     for (int z = 0; z < vSize[2]; z++) {
                         for (int y = 0; y < vSize[1]; y++) {
@@ -133,7 +134,7 @@ public :
     std::tuple<double, double, double, double>
     lerpGather(const double u, const double v, const int n, const Volume<T> &proj,
                T &val) { // normalize u, v on vox2det
-        /* correct
+
         double u_tmp = u - 0.5, v_tmp = v - 0.5;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
@@ -141,24 +142,13 @@ public :
 
         val += c1 * proj(intU, intV + 1, n) + c2 * proj(intU + 1, intV + 1, n) + c3 * proj(intU + 1, intV, n) +
                c4 * proj(intU, intV, n);
-        */
-
-        // 2d
-        double u_tmp = u - 0.5, v_tmp = v - 0.5;
-        int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
-        double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
-                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
-
-        val += c1 * proj(intU, intV, n) + c2 * proj(intU + 1, intV, n) + c3 * proj(intU + 1, intV, n) +
-               c4 * proj(intU, intV, n);
-        // 2d end
 
         return std::make_tuple(c1, c2, c3, c4);
     }
 
     void
     lerpScatter(const double u, const double v, const int n, Volume<T> &proj, const T &val) {
-        /*
+
         double u_tmp = u - 0.5, v_tmp = v - 0.5;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
@@ -166,18 +156,6 @@ public :
 
         proj(intU, intV + 1, n) += c1 * val;
         proj(intU + 1, intV + 1, n) += c2 * val;
-        proj(intU + 1, intV, n) += c3 * val;
-        proj(intU, intV, n) += c4 * val;
-         */
-
-        // 2d
-        double u_tmp = u - 0.5, v_tmp = v - 0.5;
-        int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
-        double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
-                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
-
-        proj(intU, intV, n) += c1 * val;
-        proj(intU + 1, intV, n) += c2 * val;
         proj(intU + 1, intV, n) += c3 * val;
         proj(intU, intV, n) += c4 * val;
 
