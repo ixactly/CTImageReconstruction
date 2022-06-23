@@ -69,6 +69,7 @@ public:
         */
 
         // modified condition for 2d (v)
+
         if (0.5 < u && u < sizeD[0] - 0.5 && 0 < v && v < sizeD[1])
             return true;
         else
