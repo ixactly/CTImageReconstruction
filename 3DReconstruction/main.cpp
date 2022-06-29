@@ -17,7 +17,7 @@ int main() {
     Volume<float> ct(NUM_VOXEL, NUM_VOXEL, 1);
 
     Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
-    sinogram.load("../volume_bin/Reslice_of_yukiphantom_1024x1000.raw", NUM_DETECT_U, 1, NUM_PROJ);
+    sinogram.load("../volume_bin/cfrp_SC_crop_mid-1344x360.raw", NUM_DETECT_U, 1, NUM_PROJ);
 
     /*
     for (int i = NUM_VOXEL / 3; i < NUM_VOXEL * 2 / 3 + 1; i++) {
@@ -35,13 +35,13 @@ int main() {
 
     MLEM<float> mlem;
     // mlem.forwardproj(sinogram, ctGT, geom);
-    mlem.reconstruct(sinogram, ct, geom, 1, 50, Rotate::CCW);
+    mlem.reconstruct(sinogram, ct, geom, 4, 12, Rotate::CW);
 
     end = std::chrono::system_clock::now();
     double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / (1000.0 * 1000.0));
     std::cout << "time: " << time << " (s)" << std::endl;
 
-    ct.show(0);
+    // ct.show(0);
 
     /*
     std::string savefilePath =
@@ -49,6 +49,6 @@ int main() {
             std::to_string(NUM_PROJ) + ".raw";
     */
     std::string savefilePath =
-            "../volume_bin/emos_re-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
+            "../volume_bin/cfrp_SC_mid-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
     ct.save(savefilePath);
 }

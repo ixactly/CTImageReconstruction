@@ -57,6 +57,7 @@ public :
                 for (int subOrder = 0; subOrder < subsetSize; subOrder++) {
                     pbar.update();
                     int n = (sub + batch * subOrder) % nProj;
+
                     for (int z = 0; z < vSize[2]; z++) {
                         for (int y = 0; y < vSize[1]; y++) {
                             for (int x = 0; x < vSize[0]; x++) {

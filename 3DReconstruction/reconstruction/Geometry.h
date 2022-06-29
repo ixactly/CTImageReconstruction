@@ -33,7 +33,7 @@ public:
         // sourceとvoxel座標間の関係からdetのu, vを算出
         // detectorの中心 と 再構成領域の中心 と 光源 のz座標は一致していると仮定
         const double theta = 2 * M_PI * n / sizeD[2];
-        Vec3d offset = {0.0, 0.0, 0.0};
+        Vec3d offset = {-1.98, 0.0, 0.0};
         Vec3d vecSod = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1],
                         sizeV[2] * 0.5 * voxSize};
         // Source to voxel center
