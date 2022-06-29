@@ -8,14 +8,12 @@
 #include "MLEM.h"
 #include "Geometry.h"
 #include "Params.h"
+#include "Utils.h"
 #include <chrono>
-#include "pbar.h"
 
 int main() {
 
     Volume<float> sinogram(NUM_DETECT_U, NUM_DETECT_V, NUM_PROJ);
-    // ground truth
-    Volume<float> ctGT(NUM_VOXEL, NUM_VOXEL, 1);
     Volume<float> ct(NUM_VOXEL, NUM_VOXEL, 1);
 
     Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
@@ -37,7 +35,7 @@ int main() {
 
     MLEM<float> mlem;
     // mlem.forwardproj(sinogram, ctGT, geom);
-    mlem.reconstruct(sinogram, ct, geom, 5, 50);
+    mlem.reconstruct(sinogram, ct, geom, 1, 50, Rotate::CCW);
 
     end = std::chrono::system_clock::now();
     double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / (1000.0 * 1000.0));
@@ -51,6 +49,6 @@ int main() {
             std::to_string(NUM_PROJ) + ".raw";
     */
     std::string savefilePath =
-            "../volume_bin/emos_yuki-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
+            "../volume_bin/emos_re-" + std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
     ct.save(savefilePath);
 }

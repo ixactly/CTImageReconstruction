@@ -24,43 +24,44 @@ public :
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "openmp-use-default-none"
     void
-    reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch) {
+    reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch, Rotate dir) {
         std::cout << "reconstruction by mlem..." << std::endl;
 
+        // init setting
         Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
         Volume<T> projTmp(dSize[0], dSize[1], dSize[2]);
 
         voxel.forEach([](T value) -> T { return 1.0; });
-
         int nProj = dSize[2];
-        double theta;
 
+        int rot = (dir == Rotate::CW) ? 1 : -1;
+
+        // OS method setting
         int subsetSize = (nProj + batch - 1) / batch;
         std::vector<int> subsetOrder(batch);
         for (int i = 0; i < batch; i++) {
             subsetOrder[i] = i;
         }
-
-        progressbar pbar(epoch*batch);
-
         std::mt19937_64 get_rand_mt; // fixed seed
         std::shuffle(subsetOrder.begin(), subsetOrder.end(), get_rand_mt);
+
+        // progress bar
+        progressbar pbar(epoch*nProj);
 
         // main routine
         for (int ep = 0; ep < epoch; ep++) {
             for (int& sub : subsetOrder) {
-                pbar.update();
                 projTmp.forEach([](T value) -> T { return 0.0; });
                 // forward proj
-#pragma omp parallel for
                 for (int subOrder = 0; subOrder < subsetSize; subOrder++) {
+                    pbar.update();
                     int n = (sub + batch * subOrder) % nProj;
                     for (int z = 0; z < vSize[2]; z++) {
                         for (int y = 0; y < vSize[1]; y++) {
                             for (int x = 0; x < vSize[0]; x++) {
                                 // forward projection
-                                auto [u, v] = geom.vox2det(x, y, z, -n, sinogram.size(), voxel.size());
+                                auto [u, v] = geom.vox2det(x, y, z, rot*n, sinogram.size(), voxel.size());
                                 if (geom.isHitDetect(u, v, sinogram.size())) {
                                     lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
                                 }
@@ -87,7 +88,7 @@ public :
                             T voxTmp = 0;
                             for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
                                 int n = (sub + batch * projOrder) % nProj;
-                                auto [u, v] = geom.vox2det(x, y, z, -n, sinogram.size(), voxel.size());
+                                auto [u, v] = geom.vox2det(x, y, z, rot*n, sinogram.size(), voxel.size());
                                 if (geom.isHitDetect(u, v, sinogram.size())) {
                                     auto [c1, c2, c3, c4] = lerpGather(u, v, n, projTmp, voxTmp);
                                     c += c1 + c2 + c3 + c4;
