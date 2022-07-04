@@ -7,6 +7,11 @@
 
 #include <array>
 
+enum class Rotate {
+    CW,
+    CCW
+};
+
 using Vec3i = std::array<int, 3>;
 using Vec3f = std::array<float, 3>;
 using Vec3d = std::array<double, 3>;
