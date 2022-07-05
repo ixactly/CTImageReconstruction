@@ -43,7 +43,7 @@ inline constexpr int NUM_PROJ = 100;
 inline constexpr int NUM_DETECT_U = 100;
 inline constexpr int NUM_DETECT_V = 100;
 
-inline constexpr double DETECTOR_SIZE = 0.4;
+inline constexpr double DETECTOR_SIZE = 0.1;
 
 inline constexpr int NUM_VOXEL = 100;
 #endif //INC_3DRECONSTRUCTION_PARAMS_H

@@ -46,17 +46,14 @@ public:
         const double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
                                       (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
                                        std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
-        const double gamma = std::acos((src2cent[0] * src2voxel[0] + src2cent[2] * src2voxel[2]) /
-                                       (std::sqrt(src2cent[0] * src2cent[0] + src2cent[2] * src2cent[2]) *
-                                        std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[2] * src2voxel[2])));
+        const double gamma = std::atan2(src2voxel[2], std::sqrt(src2voxel[0]*src2voxel[0]+src2voxel[1]*src2voxel[1]));
 
         const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
-        const int signV = sign(src2voxel[2] * src2cent[1] - src2voxel[1] * src2cent[2]);
         // src2voxel x src2cent
 
         // 光線がhitするdetector平面座標の算出(detectorSizeで除算して、正規化済み)
         double u = std::tan(signU * beta) * sdd / detSize + sizeD[0] * 0.5;
-        double v = std::tan(signV * gamma) * sdd / detSize + sizeD[1] * 0.5; // normalization
+        double v = std::tan(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5; // normalization
 
         return std::make_pair(u, v);
     }
