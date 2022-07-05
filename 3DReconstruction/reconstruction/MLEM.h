@@ -23,8 +23,11 @@ public :
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "openmp-use-default-none"
+
     void
-    reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch, Rotate dir) {
+    reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch,
+                Rotate dir) {
+
         std::cout << "reconstruction by mlem..." << std::endl;
 
         Vec3i dSize = sinogram.size();
@@ -47,11 +50,11 @@ public :
         std::shuffle(subsetOrder.begin(), subsetOrder.end(), get_rand_mt);
 
         // progress bar
-        progressbar pbar(epoch*nProj);
+        progressbar pbar(epoch * nProj);
 
         // main routine
         for (int ep = 0; ep < epoch; ep++) {
-            for (int& sub : subsetOrder) {
+            for (int &sub: subsetOrder) {
                 projTmp.forEach([](T value) -> T { return 0.0; });
                 // forward proj
 #pragma omp parallel for
@@ -63,7 +66,7 @@ public :
                         for (int y = 0; y < vSize[1]; y++) {
                             for (int x = 0; x < vSize[0]; x++) {
                                 // forward projection
-                                auto [u, v] = geom.vox2det(x, y, z, rot*n, sinogram.size(), voxel.size());
+                                auto [u, v] = geom.vox2det(x, y, z, rot * n, sinogram.size(), voxel.size());
                                 if (geom.isHitDetect(u, v, sinogram.size())) {
                                     lerpScatter(u, v, n, projTmp, voxel(x, y, z)); //need impl
                                 }
@@ -90,7 +93,7 @@ public :
                             T voxTmp = 0;
                             for (int projOrder = 0; projOrder < subsetSize; projOrder++) {
                                 int n = (sub + batch * projOrder) % nProj;
-                                auto [u, v] = geom.vox2det(x, y, z, rot*n, sinogram.size(), voxel.size());
+                                auto [u, v] = geom.vox2det(x, y, z, rot * n, sinogram.size(), voxel.size());
                                 if (geom.isHitDetect(u, v, sinogram.size())) {
                                     auto [c1, c2, c3, c4] = lerpGather(u, v, n, projTmp, voxTmp);
                                     c += c1 + c2 + c3 + c4;
@@ -103,27 +106,32 @@ public :
             }
         }
     }
+
 #pragma clang diagnostic pop
 
-    void forwardproj(Volume<T> &sinogram, const Volume<T> &voxel, const Geometry &geom) {
-        Vec3i s = sinogram.size();
+    void forwardproj(Volume<T> &sinogram, const Volume<T> &voxel, const Geometry &geom, Rotate dir) {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "openmp-use-default-none"
+        std::cout << "forwarding..." << std::endl;
+
+        Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
-        // Volume<T> volTmp(vSize[0], vSize[1], vSize[2]);
-        // Volume<T> projTmp(s[0], s[1], s[2]);
 
-        int nProj = s[2];
-        double theta;
+        int nProj = dSize[2];
+        int rot = (dir == Rotate::CW) ? 1 : -1;
 
+        // progress bar
+        progressbar pbar(nProj * vSize[2]);
+        // main routine
+        sinogram.forEach([](T value) -> T { return 0.0; });
         // forward proj
-// #pragma omp parallel for // parallelの位置
         for (int n = 0; n < nProj; n++) {
-            theta = -2.0 * M_PI * n / nProj;
             for (int z = 0; z < vSize[2]; z++) {
+                pbar.update();
                 for (int y = 0; y < vSize[1]; y++) {
                     for (int x = 0; x < vSize[0]; x++) {
-
                         // forward projection
-                        auto [u, v] = geom.vox2det(x, y, z, voxel.size(), sinogram.size(), theta); // thetaの渡す場所
+                        auto [u, v] = geom.vox2det(x, y, z, rot * n, sinogram.size(), voxel.size());
                         if (geom.isHitDetect(u, v, sinogram.size())) {
                             lerpScatter(u, v, n, sinogram, voxel(x, y, z)); //need impl
                         }
@@ -131,6 +139,7 @@ public :
                 }
             }
         }
+#pragma clang diagnostic pop
     }
 
     std::tuple<double, double, double, double>
@@ -140,7 +149,8 @@ public :
         double u_tmp = u - 0.5, v_tmp = v - 0.5;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
-                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 =
+                (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
 
         val += c1 * proj(intU, intV + 1, n) + c2 * proj(intU + 1, intV + 1, n) + c3 * proj(intU + 1, intV, n) +
                c4 * proj(intU, intV, n);
@@ -154,7 +164,8 @@ public :
         double u_tmp = u - 0.5, v_tmp = v - 0.5;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
-                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 =
+                (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
 
         proj(intU, intV + 1, n) += c1 * val;
         proj(intU + 1, intV + 1, n) += c2 * val;
@@ -179,7 +190,8 @@ public :
         double u_tmp = u - 0.5, v_tmp = v;
         int intU = std::floor(u_tmp), intV = std::floor(v_tmp);
         double c1 = (1.0 - (u_tmp - intU)) * (v_tmp - intV), c2 = (u_tmp - intU) * (v_tmp - intV),
-                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 = (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
+                c3 = (u_tmp - intU) * (1.0 - (v_tmp - intV)), c4 =
+                (1.0 - (u_tmp - intU)) * (1.0 - (v_tmp - intV));
 
         val += proj(intU, intV, n);
 

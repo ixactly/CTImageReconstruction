@@ -46,9 +46,9 @@ public:
         const double beta = std::acos((src2cent[0] * src2voxel[0] + src2cent[1] * src2voxel[1]) /
                                       (std::sqrt(src2cent[0] * src2cent[0] + src2cent[1] * src2cent[1]) *
                                        std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
-        const double gamma = std::acos((src2cent[1] * src2voxel[1] + src2cent[2] * src2voxel[2]) /
-                                       (std::sqrt(src2cent[1] * src2cent[1] + src2cent[2] * src2cent[2]) *
-                                        std::sqrt(src2voxel[1] * src2voxel[1] + src2voxel[2] * src2voxel[2])));
+        const double gamma = std::acos((src2cent[0] * src2voxel[0] + src2cent[2] * src2voxel[2]) /
+                                       (std::sqrt(src2cent[0] * src2cent[0] + src2cent[2] * src2cent[2]) *
+                                        std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[2] * src2voxel[2])));
 
         const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
         const int signV = sign(src2voxel[2] * src2cent[1] - src2voxel[1] * src2cent[2]);
