@@ -80,7 +80,7 @@ public :
                     int n = (sub + batch * projOrder) % nProj;
                     for (int u = 0; u < dSize[0]; u++) {
                         for (int v = 0; v < dSize[1]; v++) {
-                            projTmp(u, v, n) = sinogram(u, v, n) / projTmp(u, v, n);
+                            projTmp(u, v, n) = sinogram(u, v, n)  / (projTmp(u, v, n) + 10e-8);
                         }
                     }
                 }

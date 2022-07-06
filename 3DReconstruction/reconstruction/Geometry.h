@@ -36,6 +36,7 @@ public:
         Vec3d offset = {0.0, 0.0, 0.0};
         Vec3d vecSod = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1],
                         sizeV[2] * 0.5 * voxSize};
+
         // Source to voxel center
         Vec3d src2cent = {-vecSod[0], -vecSod[1], sizeV[2] * 0.5 * voxSize - vecSod[2]};
         // Source to voxel
