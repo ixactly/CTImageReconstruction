@@ -17,7 +17,7 @@ int main() {
     // ground truth
     Volume<float> ct(NUM_VOXEL, NUM_VOXEL, NUM_VOXEL);
     Geometry geom(SRC_DETECT_DISTANCE, SRC_OBJ_DISTANCE, DETECTOR_SIZE);
-    sinogram.load("../volume_bin/cube_phantom-100x100x100.raw", NUM_DETECT_U, NUM_DETECT_V, NUM_PROJ);
+    sinogram.load("../volume_bin/yukiphantom_float_1024x1024x1000.raw", NUM_DETECT_U, NUM_DETECT_V, NUM_PROJ);
     /*
     for (int i = NUM_VOXEL / 3; i < NUM_VOXEL * 2 / 3 + 1; i++) {
         for (int j = NUM_VOXEL / 3; j < NUM_VOXEL * 2 / 3 + 1; j++) {
@@ -35,14 +35,14 @@ int main() {
     // main function
     MLEM<float> mlem;
     // mlem.forwardproj(sinogram, ctGT, geom, Rotate::CCW);
-    mlem.reconstruct(sinogram, ct, geom, 5, 10, Rotate::CCW);
+    mlem.reconstruct(sinogram, ct, geom, 3, 50, Rotate::CCW);
 
     end = std::chrono::system_clock::now();
     double time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() /
                                       (1000.0 * 1000.0));
-    std::cout << "time: " << time << " (s)" << std::endl;
+    std::cout << "\n time: " << time << " (s)" << std::endl;
 
-    ct.show(NUM_VOXEL / 2);
+    // ct.show(NUM_VOXEL / 2);
     /*
     std::string savefilePath =
             "../volume_bin/cube_phantom-" + std::to_string(NUM_DETECT_U) + "x" + std::to_string(NUM_DETECT_V) + "x" +
@@ -50,7 +50,7 @@ int main() {
     */
 
     std::string savefilePath =
-            "../volume_bin/cube_recon-" + std::to_string(NUM_VOXEL) + "x" +
+            "../volume_bin/yuki_recon2-" + std::to_string(NUM_VOXEL) + "x" +
             std::to_string(NUM_VOXEL) + "x" + std::to_string(NUM_VOXEL) + ".raw";
 
     ct.save(savefilePath);
