@@ -26,15 +26,15 @@ public :
 
     void
     reconstruct(const Volume<T> &sinogram, Volume<T> &voxel, const Geometry &geom, const int epoch, const int batch,
-                Rotate dir) {
+                Rotate dir, bool resume) {
 
         std::cout << "reconstruction by mlem..." << std::endl;
 
         Vec3i dSize = sinogram.size();
         Vec3i vSize = voxel.size();
         Volume<T> projTmp(dSize[0], dSize[1], dSize[2]);
-
-        voxel.forEach([](T value) -> T { return 1.0; });
+        if (!resume)
+            voxel.forEach([](T value) -> T { return 1.0; });
         int nProj = dSize[2];
 
         int rot = (dir == Rotate::CW) ? 1 : -1;
