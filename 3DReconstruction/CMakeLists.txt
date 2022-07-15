@@ -14,7 +14,12 @@ if (WIN32)
 endif ()
 
 if (UNIX AND NOT APPLE)
+    enable_language(CUDA)
     find_package(OpenMP REQUIRED)
+    find_package(CUDA REQUIRED)
+    if(CUDA_FOUND)
+        message("Cuda version: " ${CUDA_VERSION})
+    endif()
 endif ()
 
 add_subdirectory(reconstruction)
@@ -24,6 +29,8 @@ add_executable(3DRecon)
 target_sources(3DRecon
         PRIVATE
         main.cpp)
-
+cuda_add_executable(Main
+        main.cu
+        )
 target_include_directories(3DRecon PRIVATE reconstruction util)
 target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst util)
