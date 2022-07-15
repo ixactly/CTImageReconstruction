@@ -9,7 +9,6 @@
 #include "Geometry.h"
 #include "Params.h"
 #include <chrono>
-#include "Pbar.h"
 
 int main() {
 

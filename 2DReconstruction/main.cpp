@@ -8,7 +8,7 @@
 #include <array>
 
 #include "reconst2d.h"
-#include "params.h"
+#include "../3DReconstruction/util/Params.h"
 
 int main() {
     std::vector<float> x_image(H_IMG * W_IMG, 0);

@@ -14,11 +14,16 @@ if (WIN32)
 endif ()
 
 if (UNIX AND NOT APPLE)
+    find_package(OpenMP REQUIRED)
 endif ()
-find_package(OpenMP REQUIRED)
 
-add_subdirectory(./reconstruction)
+add_subdirectory(reconstruction)
 add_subdirectory(util)
-add_executable(3DRecon main.cpp)
 
-target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst)
+add_executable(3DRecon)
+target_sources(3DRecon
+        PRIVATE
+        main.cpp)
+
+target_include_directories(3DRecon PRIVATE reconstruction util)
+target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst util)
