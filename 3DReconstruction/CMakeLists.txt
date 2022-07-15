@@ -16,7 +16,9 @@ endif ()
 if (UNIX AND NOT APPLE)
 endif ()
 find_package(OpenMP REQUIRED)
-add_subdirectory(./reconstruction)
 
-add_executable(3DReconstruction main.cpp)
-target_link_libraries(3DReconstruction PRIVATE ${OpenCV_LIBS} reconst)
+add_subdirectory(./reconstruction)
+add_subdirectory(util)
+add_executable(3DRecon main.cpp)
+
+target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst)
