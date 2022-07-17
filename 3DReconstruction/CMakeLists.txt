@@ -29,8 +29,6 @@ add_executable(3DRecon)
 target_sources(3DRecon
         PRIVATE
         main.cpp)
-cuda_add_executable(Main
-        main.cu
-        )
+
 target_include_directories(3DRecon PRIVATE reconstruction util)
 target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst util)
