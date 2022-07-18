@@ -1,9 +1,9 @@
 //
-// Created by 森智希 on 2022/06/02.
+// Created by tomokimori on 22/07/18.
 //
 
-#ifndef INC_3DRECONSTRUCTION_GEOMETRY_H
-#define INC_3DRECONSTRUCTION_GEOMETRY_H
+#ifndef INC_3DRECONSTRUCTION_GEOMERTRY_GPU_CUH
+#define INC_3DRECONSTRUCTION_GEOMERTRY_GPU_CUH
 
 #include <string>
 #include <array>
@@ -76,5 +76,4 @@ private:
     // Vec3d axisOffset; // point of object rotation center from rotCenter
 
 };
-
-#endif //INC_3DRECONSTRUCTION_GEOMETRY_H
+#endif //INC_3DRECONSTRUCTION_GEOMERTRY_GPU_CUH
