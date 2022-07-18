@@ -9,7 +9,7 @@ if (USE_CUDA_)
     target_sources(reconst PRIVATE
             MLEM_GPU.cu
             MLEM_GPU.cuh
-            Geomertry_GPU.cuh)
+            Geometry_GPU.cuh)
 else()
 
 add_library(reconst INTERFACE MLEM.h)

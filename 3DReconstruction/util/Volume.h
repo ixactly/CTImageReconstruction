@@ -68,12 +68,17 @@ public :
     }
 
     // show the slice of center
+    /*
     void show(const int slice) { // opencv and unique ptr(need use shared ptr?)
         // axis決めるのはメモリの並び的にだるいっす.
         cv::Mat xyPlane(sizeX, sizeY, cv::DataType<T>::type, data.get() + slice * (sizeX * sizeY));
 
         cv::imshow("slice", xyPlane);
         cv::waitKey(0);
+    } */
+
+    T* getPtr() {
+        return data.get();
     }
 
     void load(const std::string &filename, const int x, const int y, const int z) {
