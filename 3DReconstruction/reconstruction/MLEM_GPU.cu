@@ -37,5 +37,22 @@ __global__ void backwardProj(const int sizeD[3], const int sizeV[3], const float
 
 inline void MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const GeometryCUDA &geom, const int epoch, const int batch, Rotate dir) {
     int sizeV[3] = {voxel.size()[0], voxel.size()[1], voxel.size()[2]};
+    int sizeD[3] = {sinogram.size()[0], sinogram.size()[1], sinogram.size()[2]};
 
+    float* devSino, *devVoxel;
+    GeometryCUDA* devGeom;
+
+    cudaMalloc(&devSino, sizeof(float) * sizeD[0] * sizeD[1] * sizeD[2]);
+    cudaMalloc(&devVoxel, sizeof(float) * sizeV[0] * sizeV[1] * sizeV[2]);
+    cudaMalloc(&devGeom, sizeof(GeometryCUDA));
+
+    cudaMemcpy(devSino, sinogram.getPtr(), sizeof(float) * sizeD[0] * sizeD[1] * sizeD[2], cudaMemcpyHostToDevice);
+    cudaMemcpy(devVoxel, voxel.getPtr(), sizeof(float) * sizeV[0] * sizeV[1] * sizeV[2], cudaMemcpyHostToDevice);
+    cudaMemcpy(devGeom, &geom, sizeof(GeometryCUDA), cudaMemcpyHostToDevice);
+
+    const int blockSize = 8;
+    dim3 block(blockSize, blockSize, 1);
+    dim3 grid((sizeV[0] + blockSize - 1) / blockSize, (sizeV[0] + blockSize - 1) / blockSize, 1);
+
+    // forward, divide, backward proj
 }

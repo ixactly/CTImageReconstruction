@@ -25,10 +25,16 @@ endif ()
 add_subdirectory(reconstruction)
 add_subdirectory(util)
 
-add_executable(3DRecon)
-target_sources(3DRecon
-        PRIVATE
-        main.cpp)
+if (USE_CUDA_)
+    add_executable(3DRecon main.cu)
+    set_target_properties(3DRecon PROPERTIES
+            CUDA_SEPARABLE_COMPILATION ON)
+    target_include_directories(3DRecon PRIVATE reconstruction)
+    target_link_libraries(3DRecon PRIVATE reconst)
 
-target_include_directories(3DRecon PRIVATE reconstruction util)
-target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst util)
+else()
+    add_executable(3DRecon main.cpp)
+    target_include_directories(3DRecon PRIVATE reconstruction util)
+    target_link_libraries(3DRecon PRIVATE ${OpenCV_LIBS} reconst util)
+endif()
+

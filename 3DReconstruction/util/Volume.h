@@ -9,8 +9,10 @@
 #include <array>
 #include <string>
 #include <fstream>
-#include <opencv2/opencv.hpp>
+// #include <opencv2/opencv.hpp>
 #include <functional>
+#include <iostream>
+#include <cstring>
 #include "Utils.h"
 
 template<typename T>

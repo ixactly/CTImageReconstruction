@@ -9,7 +9,7 @@
 #include <cmath>
 
 template <typename T>
-__device__ int sign(T val) {
+__host__ __device__ int dsign(T val) {
     return (val > T(0)) - (val < T(0));
 }
 
@@ -29,7 +29,7 @@ public:
         const float theta = 2.0f * M_PI * n / sizeD[2];
 
         float offset[3] = {0.0, 0.0, 0.0};
-        float vecSod[3] = {std::sinf(theta) * sod + offset[0], -std::cosf(theta) * sod + offset[1], 0};
+        float vecSod[3] = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1], 0};
 
         // Source to voxel center
         float src2cent[3] = {-vecSod[0], -vecSod[1], -vecSod[2]};
@@ -43,12 +43,12 @@ public:
                                        std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
         const float gamma = std::atan2(src2voxel[2], std::sqrt(src2voxel[0]*src2voxel[0]+src2voxel[1]*src2voxel[1]));
 
-        const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
+        const int signU = dsign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
 
         // src2voxel x src2cent
         // 光線がhitするdetector平面座標の算出(detectorSizeで除算して、正規化済み)
-        float u = std::tanf(signU * beta) * sdd / detSize + sizeD[0] * 0.5f;
-        float v = std::tanf(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5f; // normalization
+        float u = std::tan(signU * beta) * sdd / detSize + sizeD[0] * 0.5f;
+        float v = std::tan(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5f; // normalization
 
         if (!(0.5 < u && u < sizeD[0] - 0.5 && 0.5 < v && v < sizeD[1] - 0.5))
             return;
@@ -74,7 +74,7 @@ public:
         const float theta = 2 * M_PI * n / sizeD[2];
 
         float offset[3] = {0.0, 0.0, 0.0};
-        float vecSod[3] = {std::sinf(theta) * sod + offset[0], -std::cosf(theta) * sod + offset[1], 0};
+        float vecSod[3] = {std::sin(theta) * sod + offset[0], -std::cos(theta) * sod + offset[1], 0};
 
         // Source to voxel center
         float src2cent[3] = {-vecSod[0], -vecSod[1], -vecSod[2]};
@@ -88,12 +88,12 @@ public:
                                       std::sqrt(src2voxel[0] * src2voxel[0] + src2voxel[1] * src2voxel[1])));
         const float gamma = std::atan2(src2voxel[2], std::sqrt(src2voxel[0]*src2voxel[0]+src2voxel[1]*src2voxel[1]));
 
-        const int signU = sign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
+        const int signU = dsign(src2voxel[0] * src2cent[1] - src2voxel[1] * src2cent[0]);
 
         // src2voxel x src2cent
         // 光線がhitするdetector平面座標の算出(detectorSizeで除算して、正規化済み)
-        float u = std::tanf(signU * beta) * sdd / detSize + sizeD[0] * 0.5;
-        float v = std::tanf(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5; // normalization
+        float u = std::tan(signU * beta) * sdd / detSize + sizeD[0] * 0.5;
+        float v = std::tan(gamma) * sdd / std::cos(beta) / detSize + sizeD[1] * 0.5; // normalization
 
         if (!(0.5 < u && u < sizeD[0] - 0.5 && 0.5 < v && v < sizeD[1] - 0.5))
             return;
