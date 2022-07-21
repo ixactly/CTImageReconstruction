@@ -112,7 +112,7 @@ xzPlaneFor(const int sizeD[3], const int sizeV[3], float *devSino, const float *
     const int z = blockIdx.y * blockDim.y + threadIdx.y;
 
     const int coord[4] = {x, y, z, n};
-
+    devSino[x+sizeD[0]*y+sizeD[1]*sizeD[0]*z] = 1.0f;
     geom->forwardProj(coord, sizeD, sizeV, devSino, devVoxel);
 
 }
@@ -141,7 +141,7 @@ backwardProj(const int sizeD[3], const int sizeV[3], const float *devSino, float
 
 
 void
-MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const GeometryCUDA &geom, const int epoch,
+MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const GeometryCUDA* geom, const int epoch,
                        const int batch, Rotate dir) {
     int sizeV[3] = {voxel.size()[0], voxel.size()[1], voxel.size()[2]};
     int sizeD[3] = {sinogram.size()[0], sinogram.size()[1], sinogram.size()[2]};
@@ -156,7 +156,7 @@ MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const Geom
 
     cudaMemcpy(devSino, sinogram.getPtr(), sizeof(float) * sizeD[0] * sizeD[1] * sizeD[2], cudaMemcpyHostToDevice);
     cudaMemcpy(devVoxel, voxel.getPtr(), sizeof(float) * sizeV[0] * sizeV[1] * sizeV[2], cudaMemcpyHostToDevice);
-    cudaMemcpy(devGeom, &geom, sizeof(GeometryCUDA), cudaMemcpyHostToDevice);
+    cudaMemcpy(devGeom, geom, sizeof(GeometryCUDA), cudaMemcpyHostToDevice);
 
     const int blockSize = 8;
     dim3 block(blockSize, blockSize, 1);
@@ -176,6 +176,7 @@ MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const Geom
     progressbar pbar(epoch * nProj);
 
     // main routine
+
     for (int ep = 0; ep < epoch; ep++) {
         for (int &sub: subsetOrder) {
 
@@ -184,6 +185,8 @@ MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const Geom
                 int n = (sub + batch * subOrder) % nProj;
                 for (int y = 0; y < sizeV[1]; y++) {
                     xzPlaneFor<<<grid, block>>>(sizeD, sizeV, devSino, devVoxel, devGeom, y, n);
+                    cudaDeviceSynchronize();
+                    cudaGetLastError();
                 }
             }
         }
@@ -195,6 +198,5 @@ MLEM_CUDA::reconstruct(Volume<float> &sinogram, Volume<float> &voxel, const Geom
     cudaFree(devSino);
     cudaFree(devVoxel);
     cudaFree(devGeom);
-
 
 }
